@@ -1,0 +1,27 @@
+---
+import '../styles/global.css';
+import { t } from '../i18n/es.ts';
+
+interface Props {
+  title?: string;
+}
+const { title } = Astro.props;
+const fullTitle = title ? `${title} · ${t.app.nombre}` : t.app.nombre;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- No indexación, capa 1 de 3 (capa 2: cabecera X-Robots-Tag; capa 3: robots.txt). -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#5b2a86" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{fullTitle}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

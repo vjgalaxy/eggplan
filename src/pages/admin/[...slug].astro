@@ -1,0 +1,11 @@
+---
+import Base from '../../layouts/Base.astro';
+import AdminApp from '../../components/AdminApp.vue';
+import { t } from '../../i18n/es.ts';
+
+// El middleware ya ha exigido sesión de administración para llegar aquí.
+---
+
+<Base title={t.admin.loginTitulo}>
+  <AdminApp client:load />
+</Base>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+.netlify/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Material de partida entregado junto al prompt (ya copiado a public/avatars y src/data)
+eggplan-avatares/

@@ -1,0 +1,40 @@
+{
+  "name": "the-eggplan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check && vue-tsc --noEmit",
+    "lint": "eslint src tests scripts",
+    "test": "vitest run",
+    "db:migrate": "netlify database migrations apply",
+    "verify": "npm run check && npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "7.0.13",
+    "@astrojs/vue": "6.0.1",
+    "@netlify/database": "2.0.3",
+    "@tailwindcss/vite": "4.3.5",
+    "astro": "6.4.8",
+    "tailwindcss": "4.3.5",
+    "vue": "3.5.45",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@electric-sql/pglite": "0.2.17",
+    "@types/node": "22.20.5",
+    "eslint": "10.14.0",
+    "eslint-plugin-vue": "10.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "3.2.7",
+    "vue-tsc": "3.3.14"
+  }
+}

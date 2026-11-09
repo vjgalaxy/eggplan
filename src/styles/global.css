@@ -1,0 +1,108 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de diseño de The Eggplan: paleta de berenjena (morado profundo), crema y verde hoja.
+ * Contrastes calculados (WCAG AA exige >= 4,5:1 en texto normal) para las combinaciones usadas:
+ *  berenjena-900 sobre crema-50 14,5 · berenjena-900 sobre blanco 15,5 · blanco sobre berenjena-700 9,9
+ *  blanco sobre hoja-700 6,4 · tinta-600 sobre blanco 8,3 / sobre crema-100 7,1 · placeholder tinta-400 4,7
+ *  peligro-700 sobre peligro-100 6,3 · hoja-700 sobre hoja-100 5,3 · berenjena-800 sobre berenjena-100 9,9
+ */
+@theme {
+  --color-berenjena-50: #f6f0fb;
+  --color-berenjena-100: #e9dcf5;
+  --color-berenjena-200: #d3b9eb;
+  --color-berenjena-300: #b48ad8;
+  --color-berenjena-500: #7b3fb3;
+  --color-berenjena-600: #6a3399;
+  --color-berenjena-700: #5b2a86;
+  --color-berenjena-800: #43205f;
+  --color-berenjena-900: #2e1a47;
+
+  --color-crema-50: #fbf7ee;
+  --color-crema-100: #f5eedd;
+  --color-crema-200: #e8dec4;
+
+  --color-hoja-100: #dcefd9;
+  --color-hoja-600: #3d8449;
+  --color-hoja-700: #2f6b3a;
+
+  --color-tinta-600: #554a63;
+  --color-tinta-400: #7a6f88;
+
+  --color-peligro-100: #fbe4e7;
+  --color-peligro-700: #a11d33;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Chat clásico (Fase 3): tipografía monoespaciada del sistema, sin fuentes externas. */
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+@layer base {
+  /* Texto base de 18 px (rem escala todo Tailwind con él). */
+  html {
+    font-size: 112.5%;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-crema-50 text-berenjena-900 font-sans antialiased;
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-berenjena-500);
+    outline-offset: 2px;
+  }
+  h1 {
+    @apply text-2xl font-bold;
+  }
+  h2 {
+    @apply text-xl font-bold;
+  }
+}
+
+/* Componentes (utilidades propias de Tailwind v4). Objetivos táctiles de 44 px o más; una acción principal por pantalla. */
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-2 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-berenjena-700 text-white hover:bg-berenjena-800;
+}
+@utility btn-secondary {
+  @apply btn border-2 border-berenjena-700 bg-white text-berenjena-700 hover:bg-berenjena-50;
+}
+@utility btn-danger {
+  @apply btn bg-peligro-700 text-white hover:bg-red-900;
+}
+@utility btn-ghost {
+  @apply btn text-berenjena-700 hover:bg-berenjena-100;
+}
+@utility input {
+  @apply min-h-12 w-full rounded-xl border-2 border-berenjena-200 bg-white px-4 py-2 text-base text-berenjena-900 placeholder:text-tinta-400;
+}
+@utility label {
+  @apply mb-1 block text-base font-semibold;
+}
+@utility hint {
+  @apply text-base text-tinta-600;
+}
+@utility card {
+  @apply rounded-2xl border border-berenjena-100 bg-white p-5 shadow-sm;
+}
+@utility alert {
+  @apply rounded-xl border-2 px-4 py-3 text-base;
+}
+@utility alert-error {
+  @apply alert border-peligro-700 bg-peligro-100 text-peligro-700;
+}
+@utility alert-ok {
+  @apply alert border-hoja-700 bg-hoja-100 text-hoja-700;
+}
+@utility alert-info {
+  @apply alert border-berenjena-200 bg-berenjena-50 text-berenjena-900;
+}
+
+/* Tarjetas imprimibles de los códigos iniciales (solo se imprime esta zona). */
+@media print {
+  body {
+    background: white;
+  }
+}

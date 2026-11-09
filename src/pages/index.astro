@@ -1,0 +1,37 @@
+---
+import Base from '../layouts/Base.astro';
+import LoginScreen from '../components/LoginScreen.vue';
+import { db } from '../lib/server.ts';
+import { listLoginCards } from '../lib/auth/users.ts';
+import { t } from '../i18n/es.ts';
+
+// Única pantalla pública: tarjetas con nick y avatar. Nada más sale de la base de datos hacia aquí.
+let cards: Awaited<ReturnType<typeof listLoginCards>> = [];
+let unavailable = false;
+try {
+  cards = await listLoginCards(await db());
+} catch {
+  unavailable = true;
+}
+---
+
+<Base title={t.login.titulo}>
+  <main class="mx-auto max-w-3xl px-4 py-8">
+    <header class="mb-8 text-center">
+      <h1 class="text-4xl font-extrabold text-berenjena-700">{t.app.nombre}</h1>
+      <p class="mt-2 text-lg">{t.app.lema}</p>
+    </header>
+    {
+      unavailable ? (
+        <p class="alert-error text-center" role="alert">
+          {t.comun.errorGenerico}
+        </p>
+      ) : (
+        <LoginScreen client:load cards={cards} />
+      )
+    }
+    <p class="mt-10 text-center">
+      <a href="/admin/login" class="hint underline">{t.login.soyAdmin}</a>
+    </p>
+  </main>
+</Base>

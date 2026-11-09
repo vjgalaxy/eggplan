@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import AdminLogin from '../../components/AdminLogin.vue';
+import { db } from '../../lib/server.ts';
+import { t } from '../../i18n/es.ts';
+
+// Garantiza que existan las plazas y la cuenta de administración (ADMIN_BOOTSTRAP_PASSWORD).
+let unavailable = false;
+try {
+  await db();
+} catch {
+  unavailable = true;
+}
+---
+
+<Base title={t.admin.loginTitulo}>
+  <main class="mx-auto max-w-3xl px-4 py-10">
+    {
+      unavailable ? (
+        <p class="alert-error text-center" role="alert">
+          {t.comun.errorGenerico}
+        </p>
+      ) : (
+        <AdminLogin client:load />
+      )
+    }
+    <p class="mt-8 text-center"><a href="/" class="hint underline">{t.errores.irInicio}</a></p>
+  </main>
+</Base>

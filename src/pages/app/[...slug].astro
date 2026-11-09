@@ -1,0 +1,20 @@
+---
+import Base from '../../layouts/Base.astro';
+import MemberApp from '../../components/MemberApp.vue';
+import { availableAvatars, config } from '../../lib/server.ts';
+
+// El middleware ya ha exigido sesión de familia para llegar aquí.
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/');
+---
+
+<Base title={user.nick}>
+  <MemberApp
+    client:load
+    nick={user.nick}
+    avatar={user.avatar}
+    avatars={[...availableAvatars]}
+    pathname={Astro.url.pathname}
+    minPasswordLength={config.acceso.claveMinLongitud}
+  />
+</Base>

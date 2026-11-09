@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import PasswordForm from '../components/PasswordForm.vue';
+import { config } from '../lib/server.ts';
+import { t } from '../i18n/es.ts';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/');
+// Quien no tiene nada pendiente va a su inicio (el cambio voluntario está en Ajustes).
+if (!user.mustChangePassword) return Astro.redirect(user.role === 'admin' ? '/admin' : '/app/ajustes');
+const minLength = user.role === 'admin' ? config.acceso.adminClaveMinLongitud : config.acceso.claveMinLongitud;
+---
+
+<Base title={t.clave.tituloObligatorio}>
+  <main class="mx-auto max-w-md px-4 py-10">
+    <h1 class="mb-6">{t.clave.tituloObligatorio}</h1>
+    <PasswordForm client:load nick={user.nick} forced={true} minLength={minLength} />
+  </main>
+</Base>

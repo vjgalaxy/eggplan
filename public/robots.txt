@@ -1,0 +1,3 @@
+# Comunidad privada: no se indexa nada. (Capa 3 de 3; ver también la meta robots y X-Robots-Tag.)
+User-agent: *
+Disallow: /

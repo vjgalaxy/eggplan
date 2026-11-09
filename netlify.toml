@@ -1,0 +1,27 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Las migraciones de netlify/database/migrations/ las aplica Netlify en cada despliegue
+# (producción y vistas previas, estas últimas con su propia rama de base de datos).
+
+# Cabeceras para el contenido ESTÁTICO (avatares, robots.txt, favicon, JS/CSS).
+# Las respuestas dinámicas (páginas SSR y /api) reciben las mismas desde src/middleware.ts.
+# Si cambias una cabecera aquí, cámbiala también en src/lib/security/headers.ts (hay un test que lo vigila).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive, nosnippet"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    X-Frame-Options = "DENY"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Content-Security-Policy = "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'"
+
+# Los archivos con nombre con hash de Astro pueden cachearse; todo lo demás no.
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
