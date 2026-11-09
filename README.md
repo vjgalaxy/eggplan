@@ -6,11 +6,11 @@ Aplicación web privada para un grupo pequeño de familias rurales: cada familia
 
 ## Stack
 
-Astro 6 (SSR con `@astrojs/netlify`) · Vue 3 (islas) · Tailwind CSS v4 (`@tailwindcss/vite`) · Netlify Database (Postgres, `@netlify/database`) · `zod` · `vitest`.
+Astro 7 (SSR con `@astrojs/netlify`) · Vue 3 (islas) · Tailwind CSS v4 (`@tailwindcss/vite`) · Netlify Database (Postgres, `@netlify/database`) · `zod` · `vitest`.
 
 ## Puesta en marcha local
 
-Requisitos: Node ≥ 22.12 y Netlify CLI ≥ 26 (`npm i -g netlify-cli`).
+Requisitos: Node ≥ 22.23.4 (Astro 7; en Netlify se fija `NODE_VERSION = "24"` en `netlify.toml`) y Netlify CLI ≥ 26 (`npm i -g netlify-cli`).
 
 ```bash
 npm install
@@ -59,4 +59,4 @@ Pendiente de contrastar con la documentación oficial en la Fase 4. Según la gu
 
 ## Avisos de seguridad de dependencias (a revisar)
 
-`npm audit` marca `astro@6.4.8` (RCE en la optimización de imágenes AVIF, XSS en transiciones/JSX, bypass con `base`): las correcciones están en **Astro ≥ 7.3.8**, que exige **Node ≥ 22.23.4**. La app no usa optimización de imágenes de Astro, transiciones, MDX ni `base`, pero conviene migrar en cuanto se actualice Node: `npm i astro@7.4.8 @astrojs/netlify@8.2.12 @astrojs/vue@7.1.2` (y fijar `NODE_VERSION` en Netlify). El resto de avisos viene de dependencias de `@astrojs/netlify` (herramientas de empaquetado en tiempo de build, no del código que se ejecuta en producción).
+El proyecto está en **Astro 7.4.8** (`@astrojs/netlify` 8.2.12, `@astrojs/vue` 7.1.2), que corrige los avisos de `astro@6` (RCE en la optimización AVIF, XSS en transiciones/JSX, bypass con `base`). `npm audit --omit=dev` aún marca avisos moderados (`deepmerge`, `glob`, `minimatch`) en dependencias de `@astrojs/netlify` (empaquetado en tiempo de build, no código que se ejecute con peticiones de usuarios); se resolverán cuando el adaptador los actualice. Revisa `npm audit` de vez en cuando.

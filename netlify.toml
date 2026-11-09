@@ -2,6 +2,10 @@
   command = "npm run build"
   publish = "dist"
 
+# Astro 7 exige Node >= 22.23.4. "24" (LTS) resuelve a la última 24.x en Netlify.
+[build.environment]
+  NODE_VERSION = "24"
+
 # Las migraciones de netlify/database/migrations/ las aplica Netlify en cada despliegue
 # (producción y vistas previas, estas últimas con su propia rama de base de datos).
 
