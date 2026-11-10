@@ -7,7 +7,8 @@
     "node": ">=22.23.4"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "netlify dev",
+    "dev:astro": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check && vue-tsc --noEmit",

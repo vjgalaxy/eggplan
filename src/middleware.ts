@@ -10,6 +10,12 @@ import { toPublicUser } from './lib/auth/users.ts';
 import { applySecurityHeaders } from './lib/security/headers.ts';
 import { checkUnsafeRequest } from './lib/security/request.ts';
 import { jsonError } from './lib/http.ts';
+import { logServerError } from './lib/log.ts';
+
+/** En desarrollo, sin `netlify dev` no hay base de datos: se dice claramente en vez de un 503 genérico. */
+const DEV_NO_DB =
+  'No hay base de datos: has arrancado Astro solo. Para desarrollar usa `npm run dev` (que lanza `netlify dev`) y entra por http://localhost:8888.';
+
 
 const PUBLIC_PAGES = new Set(['/', '/admin/login']);
 const PUBLIC_API = new Set(['/api/auth/login', '/api/auth/admin-login']);
@@ -52,8 +58,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     let resolved;
     try {
       resolved = await resolveSession(getDb(), token);
-    } catch {
-      return deny(503, 'db_unavailable', 'El servicio no está disponible un momento. Inténtalo de nuevo en unos minutos.');
+    } catch (error) {
+      logServerError('sesión', error);
+      const missingDb = (error as { name?: unknown } | null)?.name === 'MissingDatabaseConnectionError';
+      return deny(503, 'db_unavailable', !production && missingDb ? DEV_NO_DB : 'El servicio no está disponible un momento. Inténtalo de nuevo en unos minutos.');
     }
     if (resolved) {
       locals.user = toPublicUser(resolved.user);

@@ -16,7 +16,7 @@ Requisitos: Node ≥ 22.23.4 (Astro 7; en Netlify se fija `NODE_VERSION = "24"` 
 npm install
 cp .env.example .env        # y rellena ADMIN_BOOTSTRAP_PASSWORD y APP_SECRET
 netlify database migrations apply   # aplica netlify/database/migrations/ a la base local
-netlify dev                 # http://localhost:8888 (arranca Postgres local y Astro)
+npm run dev                 # = netlify dev: http://localhost:8888 (Postgres local + Astro). No uses `astro dev` a secas: no tiene base de datos.
 ```
 
 - Web de familias: `/` · administración: `/admin/login` (usuario fijo `admin`, clave = `ADMIN_BOOTSTRAP_PASSWORD`; se obliga a cambiarla al entrar).
