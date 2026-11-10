@@ -44,8 +44,29 @@ export const config = {
   },
 
   productosPropios: {
+    /** Tope duro por unidad, en Berenjenas (evita erratas). Se valida en el servidor. */
     valorMaximoPropio: 1000,
+    /** Por encima de este valor (B por unidad) se pide confirmación. */
     confirmarValorMayorQue: 100,
+  },
+
+  stock: {
+    notaMax: 200,
+    /** Cantidad máxima por artículo (hasta dos decimales). */
+    cantidadMax: 100_000,
+    /** Segundos durante los que se puede deshacer un borrado. */
+    deshacerSegundos: 30,
+    /** Artículos (no borrados) por familia. */
+    maxArticulos: 300,
+    /** Unidades habituales para productos propios; además existe «otra» con texto libre. */
+    unidadesHabituales: ['unidad', 'kg', 'docena', 'litro', 'saco', 'manojo', 'hora', 'día', 'jornada', 'lote', 'pieza', 'par', 'tarro', 'bolsa'],
+    unidadOtraMax: 20,
+  },
+
+  busquedas: {
+    maxAbiertasPorFamilia: 10,
+    textoMin: 3,
+    textoMax: 80,
   },
 
   acceso: {

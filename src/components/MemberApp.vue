@@ -3,14 +3,16 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { t } from '../i18n/es.ts';
 import { api, go } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
+import MyStockView from './MyStockView.vue';
 import PasswordForm from './PasswordForm.vue';
+import StocksView from './StocksView.vue';
 
 /**
- * Área de miembros (/app). Fase 0: esqueleto de navegación (5 elementos + menú del avatar),
- * pantalla de bienvenida y Ajustes (avatar y clave). Stocks, Mi stock, Trueques y Plaza llegan
- * en las fases siguientes.
+ * Área de miembros (/app): navegación (5 elementos + menú del avatar), bienvenida, Ajustes,
+ * Stocks (con «Se busca») y Mi stock. Trueques y Plaza llegan en las fases siguientes.
  */
 const props = defineProps<{
+  userId: number;
   nick: string;
   avatar: string | null;
   avatars: string[];
@@ -153,6 +155,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
           <PasswordForm :nick="nick" :forced="false" :min-length="minPasswordLength" />
         </div>
       </section>
+
+      <StocksView v-else-if="view === 'stocks'" :my-id="userId" />
+      <MyStockView v-else-if="view === 'mi-stock'" :nick="nick" :avatar="currentAvatar" />
 
       <!-- Secciones de fases posteriores -->
       <section v-else class="card text-center">

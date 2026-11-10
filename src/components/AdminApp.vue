@@ -2,13 +2,19 @@
 import { computed, onMounted, ref } from 'vue';
 import { t } from '../i18n/es.ts';
 import { api, go } from './api.ts';
+import AdminCatalog from './AdminCatalog.vue';
+import AdminReview from './AdminReview.vue';
 import AvatarImg from './AvatarImg.vue';
 import CodeCards, { type IssuedCode } from './CodeCards.vue';
 
 /**
- * Panel de administración (Fase 0): plazas, códigos iniciales (tarjetas imprimibles) y bloqueo.
- * El administrador NO ve claves, hashes, sesiones, mensajes de propuestas ni avisos personales.
+ * Panel de administración: plazas y códigos iniciales (tarjetas imprimibles), catálogo y cola de
+ * artículos propios por revisar. El administrador NO ve claves, hashes, sesiones, mensajes de
+ * propuestas ni avisos personales.
  */
+type Tab = 'plazas' | 'catalogo' | 'revision';
+const tab = ref<Tab>('plazas');
+const reviewCount = ref(0);
 interface Seat {
   id: number;
   seat: number;
@@ -45,11 +51,21 @@ function seatState(seat: Seat): string {
 }
 
 async function load() {
-  const result = await api<{ seats: Seat[] }>('/api/admin/seats');
+  const [result, review] = await Promise.all([
+    api<{ seats: Seat[] }>('/api/admin/seats'),
+    api<{ items: unknown[] }>('/api/admin/revision'),
+  ]);
   loading.value = false;
   if (result.ok) seats.value = result.data.seats;
   else error.value = result.data.message ?? t.comun.errorGenerico;
+  if (review.ok) reviewCount.value = review.data.items.length;
 }
+
+const tabs = computed<{ key: Tab; label: string }[]>(() => [
+  { key: 'plazas', label: t.adminCatalogo.pestanaPlazas },
+  { key: 'catalogo', label: t.adminCatalogo.pestanaCatalogo },
+  { key: 'revision', label: `${t.adminCatalogo.pestanaRevision}${reviewCount.value > 0 ? ` (${reviewCount.value})` : ''}` },
+]);
 
 async function issue(body: { seatId: number } | { onlyMissing: true }) {
   busy.value = true;
@@ -135,7 +151,24 @@ onMounted(load);
       <CodeCards :codes="codes" :address="address" />
     </section>
 
-    <section v-else class="print:hidden" aria-labelledby="seats-title">
+    <nav v-if="codes.length === 0" class="mb-6 grid grid-cols-3 gap-2 print:hidden" :aria-label="t.nav.principal">
+      <button
+        v-for="item in tabs"
+        :key="item.key"
+        type="button"
+        class="min-h-12 rounded-xl border-2 px-2 text-base font-bold"
+        :class="tab === item.key ? 'border-berenjena-700 bg-berenjena-700 text-white' : 'border-berenjena-200 bg-white text-berenjena-800 hover:bg-berenjena-50'"
+        :aria-current="tab === item.key ? 'page' : undefined"
+        @click="tab = item.key"
+      >
+        {{ item.label }}
+      </button>
+    </nav>
+
+    <AdminCatalog v-if="codes.length === 0 && tab === 'catalogo'" />
+    <AdminReview v-else-if="codes.length === 0 && tab === 'revision'" @count="reviewCount = $event" />
+
+    <section v-else-if="codes.length === 0" class="print:hidden" aria-labelledby="seats-title">
       <h1 id="seats-title" class="mb-1">{{ t.admin.plazas }}</h1>
       <p class="hint mb-5">{{ t.admin.plazasAyuda }}</p>
 

@@ -2,7 +2,7 @@
 
 Aplicación web privada para un grupo pequeño de familias rurales: cada familia mantiene su **stock**, todas lo ven, se proponen trueques en **Berenjenas** (unidad de cuenta, no dinero) y se charla en un chat comunitario. Diseñada por Identidad Rural. Especificación completa: [the-eggplan-prompt.md](the-eggplan-prompt.md).
 
-> **Estado: Fase 0 (base, acceso y seguridad).** Faltan catálogo y stock (Fase 1), trueques (Fase 2), chat y administración completa (Fase 3) y pulido (Fase 4). Este README se completará en la Fase 4.
+> **Estado: Fase 1 (catálogo, stock y «Se busca»).** Hecho: acceso y seguridad (Fase 0), catálogo, Mi stock, Stocks, productos propios con cola de revisión y «Se busca» (Fase 1). Faltan trueques (Fase 2), chat y administración completa (Fase 3) y pulido (Fase 4). Este README se completará en la Fase 4.
 
 ## Stack
 
@@ -42,6 +42,26 @@ netlify dev                 # http://localhost:8888 (arranca Postgres local y As
 ## Datos de la comunidad (replicabilidad)
 
 Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data/nicks.ts`, `src/data/catalogo.ts` y `public/avatars/`. Añadir un archivo a `public/avatars/` añade una opción de avatar (se escanea al compilar).
+
+## Catálogo y stock (Fase 1)
+
+**Dónde vive el catálogo.** `src/data/catalogo.ts` es la *fuente inicial*; la verdad en funcionamiento está en Postgres (`catalog_items`), porque el administrador lo edita, hay historial de valores y los artículos de las familias apuntan a sus filas. Al arrancar, el servidor carga el archivo de forma idempotente (`src/lib/catalog/loader.ts`):
+
+- Upsert por `slug`; ejecutarlo varias veces no cambia nada. Convierte los valores a céntimos enteros (`Math.round(valor × 100)`).
+- **Nunca pisa lo que ha tocado el administrador**: en cuanto edita un producto (valor, nombre, activo…), queda marcado `edited_by_admin` y el cargador ya no lo modifica. Los productos sin editar sí se actualizan con lo que diga el archivo (así se corrigen erratas). No toca los artículos de stock ya creados.
+- Los productos con `activo: false` se cargan desactivados. La categoría «Otros» la crea la migración.
+
+**Reglas de valor** (`src/lib/domain/values.ts`, probadas en `tests/`; todo se valida en el servidor):
+
+- Valor efectivo de un artículo del catálogo = `min(valor propio, referencia × factor de estado)`; sin valor propio, `referencia × factor`. Se calcula al leer, no se guarda: si el admin baja la referencia, los artículos se ajustan solos; si la sube, suben los que no tienen valor propio y no los que sí.
+- La familia puede bajar el valor, nunca subirlo por encima de `referencia × factor`.
+- Producto propio: se publica al instante con la etiqueta «Producto propio · valor sin verificar». Tope duro `valorMaximoPropio` (1000 B) y confirmación por encima de `confirmarValorMayorQue` (100 B), ambos en `config.ts`. Tras *verificar*, el valor efectivo es `min(propio, verificado)`. *Ajustar* fija también el valor del artículo; *vincular* aplica referencia × factor y «solo a la baja»; *crear en el catálogo* crea el producto y vincula el artículo; *ocultar* lo pausa con motivo. Cada acción avisa a la familia (tabla `notifications`, privada) y queda en `admin_audit`.
+- Borrar es lógico y se puede deshacer `deshacerSegundos` (30 s). No se puede pausar, borrar ni bajar la cantidad por debajo de lo reservado en trueques (las reservas llegan en la Fase 2).
+- Los artículos pausados y borrados nunca salen en el listado de las demás familias (lo filtra la consulta del servidor); tampoco el stock de plazas bloqueadas.
+
+**Panel de administración.** Pestañas Plazas · Catálogo (crear, editar, activar/desactivar, historial de valor: anterior, nuevo, quién y cuándo) · Por revisar (cola de productos propios, los más antiguos primero). Los cambios de valor que hace la carga inicial no generan historial; solo los del administrador.
+
+**Datos de la comunidad.** Los sinónimos del buscador están en `src/data/sinonimos.ts`; las unidades habituales y los límites, en `src/data/config.ts`.
 
 ## Seguridad (resumen de la Fase 0)
 

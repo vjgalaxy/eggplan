@@ -11,6 +11,7 @@ if (!user) return Astro.redirect('/');
 <Base title={user.nick}>
   <MemberApp
     client:load
+    userId={user.id}
     nick={user.nick}
     avatar={user.avatar}
     avatars={[...availableAvatars]}
