@@ -264,22 +264,27 @@ onBeforeUnmount(() => {
 
     <!-- Navegación inferior: tres secciones, siempre con palabras. Se oculta mientras se escribe
          para que el teclado del móvil no la ponga encima del campo. -->
-    <nav v-show="!typing" class="fixed inset-x-0 bottom-0 z-20 border-t border-berenjena-100 bg-white" :aria-label="t.nav.principal">
+    <!-- Geometría fija: alto fijo, columnas iguales, una sola línea y el contador superpuesto (absolute),
+         para que nada cambie de tamaño al pulsar, al cargar la página o al llegar avisos. -->
+    <nav v-show="!typing" class="fixed inset-x-0 bottom-0 z-20 border-t border-berenjena-100 bg-white pb-[env(safe-area-inset-bottom)]" :aria-label="t.nav.principal">
       <ul class="mx-auto grid max-w-4xl grid-cols-3">
-        <li v-for="item in items" :key="item.key">
+        <li v-for="item in items" :key="item.key" class="min-w-0">
           <a
             :href="item.href"
-            class="flex min-h-14 items-center justify-center px-1 py-2 text-center text-sm font-bold leading-tight"
+            class="relative flex h-14 items-center justify-center px-1 text-center text-sm font-bold whitespace-nowrap select-none [-webkit-tap-highlight-color:transparent]"
             :class="activeNav === item.key ? 'bg-berenjena-100 text-berenjena-800' : 'text-tinta-600 hover:bg-berenjena-50'"
             :aria-current="activeNav === item.key ? 'page' : undefined"
           >
-            {{ item.label }}
-            <span
-              v-if="item.key === 'trueques' && unread > 0"
-              class="ml-1 inline-flex min-w-6 items-center justify-center rounded-full bg-peligro-700 px-1.5 text-sm font-bold text-white"
-              :aria-label="t.avisos.sinLeer(unread)"
-            >
-              {{ unread }}
+            <span class="relative">
+              {{ item.label }}
+              <span
+                v-if="item.key === 'trueques' && unread > 0"
+                class="absolute -top-3 left-full ml-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-peligro-700 px-1.5 text-sm font-bold text-white"
+                aria-hidden="true"
+              >
+                {{ unread > 99 ? '99+' : unread }}
+              </span>
+              <span v-if="item.key === 'trueques' && unread > 0" class="sr-only">, {{ t.avisos.sinLeer(unread) }}</span>
             </span>
           </a>
         </li>

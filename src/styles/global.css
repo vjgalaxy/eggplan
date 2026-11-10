@@ -42,6 +42,9 @@
   html {
     font-size: 112.5%;
     -webkit-text-size-adjust: 100%;
+    /* Reserva siempre el hueco de la barra de desplazamiento: sin esto, al pasar de una página corta a
+       una larga aparece la barra y toda la página (y el menú inferior) se desplaza unos píxeles. */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-crema-50 text-berenjena-900 font-sans antialiased;

@@ -65,10 +65,11 @@ async function load() {
   if (review.ok) reviewCount.value = review.data.items.length;
 }
 
-const tabs = computed<{ key: Tab; label: string }[]>(() => [
+// El contador de «Revisión» va aparte (superpuesto), para que la pestaña no cambie de tamaño al cargarlo.
+const tabs = computed<{ key: Tab; label: string; count?: number }[]>(() => [
   { key: 'plazas', label: t.adminCatalogo.pestanaPlazas },
   { key: 'catalogo', label: t.adminCatalogo.pestanaCatalogo },
-  { key: 'revision', label: `${t.adminCatalogo.pestanaRevision}${reviewCount.value > 0 ? ` (${reviewCount.value})` : ''}` },
+  { key: 'revision', label: t.adminCatalogo.pestanaRevision, count: reviewCount.value },
   { key: 'trueques', label: t.adminTrueques.pestana },
   { key: 'plaza', label: t.plaza.adminTitulo },
 ]);
@@ -162,12 +163,18 @@ onMounted(load);
         v-for="item in tabs"
         :key="item.key"
         type="button"
-        class="min-h-12 rounded-xl border-2 px-2 text-base font-bold"
+        class="relative h-12 min-w-0 rounded-xl border-2 px-2 text-base font-bold whitespace-nowrap"
         :class="tab === item.key ? 'border-berenjena-700 bg-berenjena-700 text-white' : 'border-berenjena-200 bg-white text-berenjena-800 hover:bg-berenjena-50'"
         :aria-current="tab === item.key ? 'page' : undefined"
         @click="tab = item.key"
       >
         {{ item.label }}
+        <span
+          v-if="item.count"
+          class="absolute -top-2 -right-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-peligro-700 px-1.5 text-sm font-bold text-white"
+        >
+          {{ item.count }}
+        </span>
       </button>
     </nav>
 
