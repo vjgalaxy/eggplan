@@ -41,6 +41,10 @@ export const config = {
     maxPendientesPorFamilia: 5,
     caducidadDias: 7,
     maxCaracteresMensaje: 300,
+    /** Líneas máximas que puede dar cada parte en una propuesta. */
+    maxLineasPorLado: 15,
+    /** Mensajes máximos en el hilo de una propuesta. */
+    maxMensajesPorPropuesta: 100,
   },
 
   productosPropios: {

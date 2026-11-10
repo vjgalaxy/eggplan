@@ -105,10 +105,11 @@ interface RawStock {
   estado: 'activo' | 'pausado' | 'borrado';
   hidden_reason: string | null;
   created_at: Date;
+  owner_status: 'sin_activar' | 'activo' | 'bloqueado';
 }
 
 const STOCK_SELECT = `
-  SELECT s.id, s.user_id, u.nick, u.avatar, s.catalog_item_id, c.slug AS catalog_slug,
+  SELECT s.id, s.user_id, u.nick, u.avatar, u.status AS owner_status, s.catalog_item_id, c.slug AS catalog_slug,
          COALESCE(c.nombre, s.custom_name) AS nombre,
          COALESCE(c.category_slug, s.custom_category) AS categoria,
          COALESCE(c.tipo, s.tipo) AS tipo, COALESCE(c.unidad, s.unidad) AS unidad,
@@ -176,6 +177,25 @@ export interface FamilySummary {
   id: number;
   nick: string;
   avatar: string | null;
+  /** Trueques completados (sin valoraciones ni puntuaciones). */
+  completados: number;
+}
+
+/**
+ * Artículos por id, para componer o aceptar trueques. Con `lock` bloquea las filas hasta el final
+ * de la transacción, siempre en orden de id (así dos aceptaciones simultáneas no se bloquean entre sí).
+ */
+export async function fetchItems(
+  q: Queryable,
+  ids: readonly number[],
+  options: { lock?: boolean } = {},
+): Promise<{ item: StockItemView; estado: 'activo' | 'pausado' | 'borrado'; ownerStatus: 'sin_activar' | 'activo' | 'bloqueado' }[]> {
+  if (ids.length === 0) return [];
+  const { rows } = await q.query<RawStock>(
+    `${STOCK_SELECT} WHERE s.id = ANY($1::int[]) ORDER BY s.id ${options.lock ? 'FOR UPDATE OF s' : ''}`,
+    [[...ids]],
+  );
+  return rows.map((r) => ({ item: toView(r, true), estado: r.estado, ownerStatus: r.owner_status }));
 }
 
 /**
@@ -188,7 +208,10 @@ export async function listVisible(
   options: { includeAll?: boolean } = {},
 ): Promise<{ families: FamilySummary[]; items: StockItemView[] }> {
   const { rows: families } = await db.query<FamilySummary>(
-    `SELECT id, nick, avatar FROM users WHERE role = 'member' AND status <> 'bloqueado' ORDER BY seat`,
+    `SELECT u.id, u.nick, u.avatar,
+            (SELECT count(*)::int FROM trades t
+              WHERE t.estado = 'completada' AND (t.proposer_id = u.id OR t.receiver_id = u.id)) AS completados
+       FROM users u WHERE u.role = 'member' AND u.status <> 'bloqueado' ORDER BY u.seat`,
   );
   const filter = options.includeAll ? `s.estado <> 'borrado'` : `s.estado = 'activo'`;
   const { rows } = await db.query<RawStock>(

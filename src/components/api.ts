@@ -23,7 +23,10 @@ export async function api<T = Record<string, unknown>>(
     try {
       data = (await response.json()) as ApiResult<T>['data'];
     } catch {
-      data = { message: t.comun.errorGenerico } as ApiResult<T>['data'];
+      // Respuesta sin JSON (p. ej. una página de error del servidor o de un proxy): mensaje claro según el estado.
+      const message =
+        response.status === 404 ? t.comun.noEncontrado : response.status === 403 ? t.erroresStock.sin_permiso : t.comun.errorGenerico;
+      data = { message } as ApiResult<T>['data'];
     }
     return { ok: response.ok, status: response.status, data };
   } catch {

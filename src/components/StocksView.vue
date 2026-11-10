@@ -76,6 +76,9 @@ async function reloadWants() {
   if (board.ok) wants.value = board.data.wants;
 }
 
+/** «Proponer trueque» abre la propuesta con este artículo ya añadido. */
+const proposeLink = (item: StockItemView) => `/app/trueques/nuevo?con=${item.userId}&articulo=${item.id}`;
+
 function publishFromSearch() {
   wantStart.value = query.value.trim();
   tab.value = 'busca';
@@ -120,13 +123,19 @@ const tabs: { key: Tab; label: string }[] = [
           <AvatarImg :avatar="family.avatar" :nick="family.nick" size="lg" />
           <div>
             <h2>{{ family.nick }}</h2>
-            <p class="hint">{{ t.stocks.familiaArticulos(familyItems.length) }}</p>
+            <p class="hint">{{ t.stocks.familiaArticulos(familyItems.length) }} · {{ t.stocks.completados(family.completados) }}</p>
             <a v-if="family.id === myId" href="/app/mi-stock" class="font-semibold text-berenjena-700 underline">{{ t.stocks.tuStock }}</a>
           </div>
         </div>
         <div v-if="familyItems.length === 0" class="card text-center">{{ t.stocks.familiaVacia }}</div>
         <ul v-else class="space-y-3">
-          <li v-for="item in familyItems" :key="item.id"><ArticleCard :item="item" :category-name="categoryName(item.categoria)" /></li>
+          <li v-for="item in familyItems" :key="item.id">
+            <ArticleCard :item="item" :category-name="categoryName(item.categoria)">
+              <template v-if="item.userId !== myId && item.disponible > 0" #actions>
+                <a :href="proposeLink(item)" class="btn-primary">{{ t.trueques.proponer }}</a>
+              </template>
+            </ArticleCard>
+          </li>
         </ul>
       </div>
 
@@ -183,7 +192,11 @@ const tabs: { key: Tab; label: string }[] = [
       </div>
       <ul v-else class="space-y-3">
         <li v-for="item in productResults" :key="item.id">
-          <ArticleCard :item="item" show-owner :category-name="categoryName(item.categoria)" />
+          <ArticleCard :item="item" show-owner :category-name="categoryName(item.categoria)">
+            <template v-if="item.userId !== myId && item.disponible > 0" #actions>
+              <a :href="proposeLink(item)" class="btn-primary">{{ t.trueques.proponer }}</a>
+            </template>
+          </ArticleCard>
         </li>
       </ul>
 

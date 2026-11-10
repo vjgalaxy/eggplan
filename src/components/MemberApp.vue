@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { config } from '../data/config.ts';
 import { t } from '../i18n/es.ts';
 import { api, go } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
 import MyStockView from './MyStockView.vue';
 import PasswordForm from './PasswordForm.vue';
 import StocksView from './StocksView.vue';
+import TradeComposer from './TradeComposer.vue';
+import TradeDetail from './TradeDetail.vue';
+import TruequesView from './TruequesView.vue';
 
 /**
  * Área de miembros (/app): navegación (5 elementos + menú del avatar), bienvenida, Ajustes,
@@ -17,6 +21,8 @@ const props = defineProps<{
   avatar: string | null;
   avatars: string[];
   pathname: string;
+  /** Cadena de consulta de la URL (p. ej. «?con=3&articulo=12»), para abrir una propuesta ya empezada. */
+  search: string;
   minPasswordLength: number;
 }>();
 
@@ -33,15 +39,42 @@ const items = [
   { key: 'plaza', href: '/app/plaza', label: t.nav.plaza },
 ] as const;
 
-const view = computed(() => {
-  const path = props.pathname.replace(/\/+$/, '');
-  if (path === '/app/ajustes') return 'ajustes';
-  return items.find((i) => i.href === path)?.key ?? 'inicio';
+const path = computed(() => props.pathname.replace(/\/+$/, ''));
+const query = computed(() => new URLSearchParams(props.search));
+const numberParam = (name: string): number | undefined => {
+  const n = Number(query.value.get(name));
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+};
+const tradeId = computed(() => {
+  const match = /^\/app\/trueques\/(\d+)$/.exec(path.value);
+  return match ? Number(match[1]) : undefined;
 });
 
-const title = computed(() =>
-  view.value === 'ajustes' ? t.ajustes.titulo : (items.find((i) => i.key === view.value)?.label ?? t.nav.inicio),
-);
+const view = computed(() => {
+  if (path.value === '/app/ajustes') return 'ajustes';
+  if (path.value === '/app/trueques/nuevo') return 'trueque-nuevo';
+  if (tradeId.value !== undefined) return 'trueque-detalle';
+  return items.find((i) => i.href === path.value)?.key ?? 'inicio';
+});
+
+/** Elemento de la navegación inferior que se marca como actual. */
+const activeNav = computed(() => (view.value === 'trueque-nuevo' || view.value === 'trueque-detalle' ? 'trueques' : view.value));
+
+const title = computed(() => {
+  if (view.value === 'ajustes') return t.ajustes.titulo;
+  if (view.value === 'trueque-nuevo') return numberParam('contra') === undefined ? t.trueques.nuevaTitulo : t.trueques.contraTitulo;
+  if (view.value === 'trueque-detalle') return t.trueques.titulo;
+  return items.find((i) => i.key === view.value)?.label ?? t.nav.inicio;
+});
+
+// Contador de avisos sin leer: consulta ligera cada ~30 s, solo con la pestaña visible.
+const unread = ref(0);
+async function refreshUnread() {
+  if (document.visibilityState !== 'visible') return;
+  const result = await api<{ unread: number }>('/api/me/avisos?count=1');
+  if (result.ok) unread.value = result.data.unread;
+}
+let unreadTimer: ReturnType<typeof setInterval> | undefined;
 
 function avatarName(file: string): string {
   return file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
@@ -68,8 +101,17 @@ async function logout() {
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') menuOpen.value = false;
 }
-onMounted(() => document.addEventListener('keydown', onKeydown));
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown);
+  document.addEventListener('visibilitychange', refreshUnread);
+  void refreshUnread();
+  unreadTimer = setInterval(refreshUnread, config.avisos.pollingMs);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('visibilitychange', refreshUnread);
+  clearInterval(unreadTimer);
+});
 </script>
 
 <template>
@@ -158,6 +200,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
       <StocksView v-else-if="view === 'stocks'" :my-id="userId" />
       <MyStockView v-else-if="view === 'mi-stock'" :nick="nick" :avatar="currentAvatar" />
+      <TruequesView v-else-if="view === 'trueques'" @unread="unread = $event" />
+      <TradeComposer
+        v-else-if="view === 'trueque-nuevo'"
+        :my-id="userId"
+        :pre-family="numberParam('con')"
+        :pre-item="numberParam('articulo')"
+        :counter-of="numberParam('contra')"
+      />
+      <TradeDetail v-else-if="view === 'trueque-detalle' && tradeId !== undefined" :trade-id="tradeId" />
 
       <!-- Secciones de fases posteriores -->
       <section v-else class="card text-center">
@@ -173,10 +224,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
           <a
             :href="item.href"
             class="flex min-h-14 items-center justify-center px-1 py-2 text-center text-sm font-bold leading-tight"
-            :class="view === item.key ? 'bg-berenjena-100 text-berenjena-800' : 'text-tinta-600 hover:bg-berenjena-50'"
-            :aria-current="view === item.key ? 'page' : undefined"
+            :class="activeNav === item.key ? 'bg-berenjena-100 text-berenjena-800' : 'text-tinta-600 hover:bg-berenjena-50'"
+            :aria-current="activeNav === item.key ? 'page' : undefined"
           >
             {{ item.label }}
+            <span
+              v-if="item.key === 'trueques' && unread > 0"
+              class="ml-1 inline-flex min-w-6 items-center justify-center rounded-full bg-peligro-700 px-1.5 text-sm font-bold text-white"
+              :aria-label="t.avisos.sinLeer(unread)"
+            >
+              {{ unread }}
+            </span>
           </a>
         </li>
       </ul>

@@ -151,6 +151,9 @@ describe('acceso con código inicial', () => {
     expect(meco?.must_change_password).toBe(true);
     expect(await resolveSession(db, session.token)).toBeNull();
     expect((await memberLogin('Meco', 'mi huerta en agosto')).ok).toBe(false);
+    // Como ya había elegido clave, queda un aviso de «clave restablecida» (y no por emitir un primer código).
+    const { rows } = await db.query<{ tipo: string }>(`SELECT tipo FROM notifications WHERE user_id = $1 ORDER BY id`, [meco!.id]);
+    expect(rows.map((r) => r.tipo)).toEqual(['clave_cambiada', 'clave_restablecida']);
   });
 });
 

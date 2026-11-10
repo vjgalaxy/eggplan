@@ -2,7 +2,7 @@
 
 Aplicación web privada para un grupo pequeño de familias rurales: cada familia mantiene su **stock**, todas lo ven, se proponen trueques en **Berenjenas** (unidad de cuenta, no dinero) y se charla en un chat comunitario. Diseñada por Identidad Rural. Especificación completa: [the-eggplan-prompt.md](the-eggplan-prompt.md).
 
-> **Estado: Fase 1 (catálogo, stock y «Se busca»).** Hecho: acceso y seguridad (Fase 0), catálogo, Mi stock, Stocks, productos propios con cola de revisión y «Se busca» (Fase 1). Faltan trueques (Fase 2), chat y administración completa (Fase 3) y pulido (Fase 4). Este README se completará en la Fase 4.
+> **Estado: Fase 2 (trueques y avisos).** Hecho: acceso y seguridad (Fase 0), catálogo, stock, productos propios y «Se busca» (Fase 1), trueques con reservas, contraofertas, préstamos, hilo privado, caducidad y buzón de avisos (Fase 2). Faltan chat y administración completa (Fase 3) y pulido (Fase 4). Este README se completará en la Fase 4.
 
 ## Stack
 
@@ -63,6 +63,22 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 **Panel de administración.** Pestañas Plazas · Catálogo (crear, editar, activar/desactivar, historial de valor: anterior, nuevo, quién y cuándo) · Por revisar (cola de productos propios, los más antiguos primero). Los cambios de valor que hace la carga inicial no generan historial; solo los del administrador.
 
 **Datos de la comunidad.** Los sinónimos del buscador están en `src/data/sinonimos.ts`; las unidades habituales y los límites, en `src/data/config.ts`.
+
+## Trueques y avisos (Fase 2)
+
+**Ciclo de una propuesta** (`src/lib/trades/trades.ts`): `pendiente → aceptada | rechazada | cancelada | caducada | contraofertada`, y `aceptada → completada | cancelada`.
+
+- **Crear**: se comprueba que cada artículo es de quien toca, está activo y tiene cantidad libre; cada línea guarda una **copia congelada** (nombre, unidad, valor efectivo, estado) que no cambia aunque cambie después la referencia. Puede ser un regalo (una parte sin líneas). Máximo de pendientes por familia (`maxPendientesPorFamilia`) y de líneas por parte. Caduca a los `caducidadDias` (7).
+- **Aceptar**: dentro de una transacción se bloquea la propuesta y los artículos (siempre en el mismo orden), se **vuelve a comprobar el stock** y se **reserva** en las dos partes. Si ya no hay, no se acepta y se explica por qué. La base de datos además tiene `CHECK (reservado <= cantidad)` como última barrera: no se puede sobrevender aunque falle el servidor.
+- **Contraoferta**: es una propuesta nueva enlazada (`parent_trade_id`) con las partes invertidas; la original queda `contraofertada`.
+- **Entrega**: cada parte marca «entregado». Cuando las dos lo han hecho → `completada`: se descuenta el stock y se libera la reserva. Cancelar tras aceptar libera la reserva.
+- **Préstamos**: al completarse no se descuenta; la cantidad sigue reservada («prestado») hasta que quien presta marca «devuelto».
+- **Caducidad**: las pendientes vencidas pasan a `caducada` de forma oportunista (al listar o abrir una propuesta, o al intentar aceptarla) y se avisa a las dos partes. No hace falta una función programada. Las aceptadas no caducan.
+- **Hilo**: mensajes de hasta 300 caracteres, solo para las dos partes; para cualquier otra persona la propuesta «no existe» (404, contra IDOR). La administración no tiene ninguna vía hacia el hilo: ve solo metadatos (`src/lib/trades/metadata.ts`), y un test comprueba que sus archivos no consultan `trade_messages` ni importan el módulo del hilo.
+- **Avisos** (`notifications`, privados): propuesta recibida/aceptada/rechazada/cancelada/caducada, contraoferta, mensaje (los sin leer de una misma propuesta se agrupan), entregado, completado, préstamo devuelto, clave cambiada o restablecida y revisión de un producto propio. El contador de la navegación se consulta cada `avisos.pollingMs` (30 s) solo con la pestaña visible.
+- Importes en cB enteros; el total de una línea se calcula con aritmética entera (`lineTotalCb`).
+
+**Nota de desarrollo.** Con `netlify dev` (puerto 8888), el proxy sustituye las respuestas 403/404 de la API por la página 404 en HTML; la interfaz lo tolera mostrando un mensaje claro. El servidor de Astro directo (4321) y producción devuelven el JSON con el motivo.
 
 ## Seguridad (resumen de la Fase 0)
 

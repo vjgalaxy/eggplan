@@ -212,7 +212,7 @@ onMounted(load);
       <template v-else>
         <p class="hint" role="status">{{ t.adminCatalogo.mostrando(shown.length, filtered.length) }}</p>
         <ul class="space-y-2">
-          <li v-for="item in shown" :key="item.id" class="card flex flex-wrap items-center justify-between gap-3 !p-4">
+          <li v-for="item in shown" :key="item.id" class="card flex flex-wrap items-center justify-between gap-3 p-4!">
             <div>
               <p class="font-bold">
                 {{ item.nombre }}

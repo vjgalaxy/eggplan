@@ -83,14 +83,15 @@ export async function issueInitialCodes(
   adminId: number,
   target: { seatId: number } | { onlyMissing: true },
 ): Promise<IssuedCode[]> {
-  const columns = 'id, nick, avatar';
+  // `had_credential`: la persona ya había elegido su propia clave (no solo tenía un código sin usar).
+  const columns = 'id, nick, avatar, (password_hash IS NOT NULL AND NOT must_change_password) AS had_credential';
   const { rows: seats } =
     'seatId' in target
-      ? await db.query<{ id: number; nick: string; avatar: string | null }>(
+      ? await db.query<{ id: number; nick: string; avatar: string | null; had_credential: boolean }>(
           `SELECT ${columns} FROM users WHERE role = 'member' AND id = $1`,
           [target.seatId],
         )
-      : await db.query<{ id: number; nick: string; avatar: string | null }>(
+      : await db.query<{ id: number; nick: string; avatar: string | null; had_credential: boolean }>(
           `SELECT ${columns} FROM users
             WHERE role = 'member' AND password_hash IS NULL AND status <> 'bloqueado' ORDER BY seat`,
         );
@@ -111,6 +112,8 @@ export async function issueInitialCodes(
         [seat.id, hash],
       );
       await revokeUserSessions(q, seat.id);
+      // Si la plaza ya tenía clave (olvido de clave), queda un aviso para cuando vuelva a entrar.
+      if (seat.had_credential) await q.query(`INSERT INTO notifications (user_id, tipo) VALUES ($1, 'clave_restablecida')`, [seat.id]);
       await audit(q, adminId, 'codigo_inicial_generado', seat.nick, {});
     }
   });

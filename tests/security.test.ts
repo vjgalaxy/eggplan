@@ -70,11 +70,16 @@ describe('secretos', () => {
 
 describe('el admin no tiene rutas hacia datos privados', () => {
   it('ningún endpoint de admin toca sesiones, avisos, mensajes ni hashes', () => {
-    const adminFiles = sourceFiles.filter((f) => /[\\/]api[\\/]admin[\\/]/.test(f) || /lib[\\/]auth[\\/]admin\.ts$/.test(f));
+    const adminFiles = sourceFiles.filter(
+      (f) => /[\\/]api[\\/]admin[\\/]/.test(f) || /lib[\\/]auth[\\/]admin\.ts$/.test(f) || /lib[\\/]trades[\\/]metadata\.ts$/.test(f),
+    );
     expect(adminFiles.length).toBeGreaterThan(0);
     for (const file of adminFiles) {
       const source = readFileSync(file, 'utf8');
       expect(source, file).not.toMatch(/FROM\s+(sessions|notifications|trade_messages)\b/i);
+      expect(source, file).not.toMatch(/JOIN\s+(sessions|notifications|trade_messages)\b/i);
+      // Ni siquiera pueden importar el módulo del hilo de mensajes ni el del buzón de avisos.
+      expect(source, file).not.toMatch(/from\s+['"][^'"]*(trades[\\/]trades|avisos)(\.ts)?['"]/);
       // Los hashes solo se usan para saber si existe credencial (IS NULL / IS NOT NULL), nunca se seleccionan.
       expect(source, file).not.toMatch(/SELECT[^;]*\bpassword_hash\b(?!\s+IS)/is);
     }

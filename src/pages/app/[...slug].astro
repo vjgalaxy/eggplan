@@ -16,6 +16,7 @@ if (!user) return Astro.redirect('/');
     avatar={user.avatar}
     avatars={[...availableAvatars]}
     pathname={Astro.url.pathname}
+    search={Astro.url.search}
     minPasswordLength={config.acceso.claveMinLongitud}
   />
 </Base>

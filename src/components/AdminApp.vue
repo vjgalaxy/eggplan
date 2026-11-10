@@ -4,6 +4,7 @@ import { t } from '../i18n/es.ts';
 import { api, go } from './api.ts';
 import AdminCatalog from './AdminCatalog.vue';
 import AdminReview from './AdminReview.vue';
+import AdminTrades from './AdminTrades.vue';
 import AvatarImg from './AvatarImg.vue';
 import CodeCards, { type IssuedCode } from './CodeCards.vue';
 
@@ -12,7 +13,7 @@ import CodeCards, { type IssuedCode } from './CodeCards.vue';
  * artículos propios por revisar. El administrador NO ve claves, hashes, sesiones, mensajes de
  * propuestas ni avisos personales.
  */
-type Tab = 'plazas' | 'catalogo' | 'revision';
+type Tab = 'plazas' | 'catalogo' | 'revision' | 'trueques';
 const tab = ref<Tab>('plazas');
 const reviewCount = ref(0);
 interface Seat {
@@ -65,6 +66,7 @@ const tabs = computed<{ key: Tab; label: string }[]>(() => [
   { key: 'plazas', label: t.adminCatalogo.pestanaPlazas },
   { key: 'catalogo', label: t.adminCatalogo.pestanaCatalogo },
   { key: 'revision', label: `${t.adminCatalogo.pestanaRevision}${reviewCount.value > 0 ? ` (${reviewCount.value})` : ''}` },
+  { key: 'trueques', label: t.adminTrueques.pestana },
 ]);
 
 async function issue(body: { seatId: number } | { onlyMissing: true }) {
@@ -151,7 +153,7 @@ onMounted(load);
       <CodeCards :codes="codes" :address="address" />
     </section>
 
-    <nav v-if="codes.length === 0" class="mb-6 grid grid-cols-3 gap-2 print:hidden" :aria-label="t.nav.principal">
+    <nav v-if="codes.length === 0" class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden" :aria-label="t.nav.principal">
       <button
         v-for="item in tabs"
         :key="item.key"
@@ -167,6 +169,7 @@ onMounted(load);
 
     <AdminCatalog v-if="codes.length === 0 && tab === 'catalogo'" />
     <AdminReview v-else-if="codes.length === 0 && tab === 'revision'" @count="reviewCount = $event" />
+    <AdminTrades v-else-if="codes.length === 0 && tab === 'trueques'" />
 
     <section v-else-if="codes.length === 0" class="print:hidden" aria-labelledby="seats-title">
       <h1 id="seats-title" class="mb-1">{{ t.admin.plazas }}</h1>
