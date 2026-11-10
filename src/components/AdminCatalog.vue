@@ -5,6 +5,7 @@ import { formatB, formatCbInput, formatDate, parseB } from '../lib/format.ts';
 import { searchItems } from '../lib/domain/search.ts';
 import type { CatalogItemRow, CategoryRow, ValueHistoryRow } from '../lib/catalog/catalog.ts';
 import { api } from './api.ts';
+import ProductEmoji from './ProductEmoji.vue';
 import { refreshCatalogData } from './catalog-store.ts';
 
 /** Catálogo (administración): crear, editar, activar/desactivar y cambiar el valor de referencia con historial. */
@@ -215,7 +216,7 @@ onMounted(load);
           <li v-for="item in shown" :key="item.id" class="card flex flex-wrap items-center justify-between gap-3 p-4!">
             <div>
               <p class="font-bold">
-                {{ item.nombre }}
+                <ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}
                 <span v-if="!item.activo" class="ml-1 rounded-lg bg-crema-200 px-2 text-base">{{ t.adminCatalogo.inactivo }}</span>
                 <span v-if="item.refSource === 'admin'" class="ml-1 rounded-lg bg-berenjena-100 px-2 text-base text-berenjena-800">{{ t.adminCatalogo.editadoAdmin }}</span>
               </p>

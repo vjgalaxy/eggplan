@@ -9,6 +9,7 @@ import type { TradeDetail } from '../lib/trades/trades.ts';
 import { api, go } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
 import TradeSummaryBar from './TradeSummaryBar.vue';
+import ProductEmoji from './ProductEmoji.vue';
 
 /**
  * Componer una propuesta en pasos: familia → lo que recibes → lo que das → revisar y enviar.
@@ -220,7 +221,7 @@ onMounted(load);
         <p v-else-if="theirItems.length === 0" class="alert-info">{{ t.trueques.sinArticulosOtra }}</p>
         <ul v-else class="space-y-3">
           <li v-for="item in theirItems" :key="item.id" class="card">
-            <p class="text-lg font-bold">{{ item.nombre }}</p>
+            <p class="text-lg font-bold"><ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}</p>
             <p class="hint">
               {{ t.trueques.disponibles(formatQty(item.disponible), item.unidad) }} · {{ t.articulo.porUnidad(formatB(item.valueCb), item.unidad) }}
               <span v-if="item.unverified"> · {{ t.articulo.valorSinVerificar }}</span>
@@ -248,7 +249,7 @@ onMounted(load);
         </div>
         <ul v-else class="space-y-3">
           <li v-for="item in myItems" :key="item.id" class="card">
-            <p class="text-lg font-bold">{{ item.nombre }}</p>
+            <p class="text-lg font-bold"><ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}</p>
             <p class="hint">
               {{ t.trueques.disponibles(formatQty(item.disponible), item.unidad) }} · {{ t.articulo.porUnidad(formatB(item.valueCb), item.unidad) }}
               <span v-if="item.unverified"> · {{ t.articulo.valorSinVerificar }}</span>
@@ -274,14 +275,14 @@ onMounted(load);
             <h3 class="mb-2 text-lg font-bold">{{ t.trueques.das }}</h3>
             <p v-if="giveLines.length === 0" class="hint">{{ t.trueques.nadaLineas }}</p>
             <ul v-else class="space-y-1">
-              <li v-for="c in giveLines" :key="c.item.id">{{ formatQty(c.cantidad) }} {{ c.item.unidad }} · {{ c.item.nombre }}</li>
+              <li v-for="c in giveLines" :key="c.item.id"><ProductEmoji :nombre="c.item.nombre" :categoria="c.item.categoria" :tipo="c.item.tipo" />{{ formatQty(c.cantidad) }} {{ c.item.unidad }} · {{ c.item.nombre }}</li>
             </ul>
           </div>
           <div class="card">
             <h3 class="mb-2 text-lg font-bold">{{ t.trueques.recibes }}</h3>
             <p v-if="receiveLines.length === 0" class="hint">{{ t.trueques.nadaLineas }}</p>
             <ul v-else class="space-y-1">
-              <li v-for="c in receiveLines" :key="c.item.id">{{ formatQty(c.cantidad) }} {{ c.item.unidad }} · {{ c.item.nombre }}</li>
+              <li v-for="c in receiveLines" :key="c.item.id"><ProductEmoji :nombre="c.item.nombre" :categoria="c.item.categoria" :tipo="c.item.tipo" />{{ formatQty(c.cantidad) }} {{ c.item.unidad }} · {{ c.item.nombre }}</li>
             </ul>
           </div>
         </div>

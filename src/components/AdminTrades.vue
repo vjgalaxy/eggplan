@@ -4,6 +4,7 @@ import { t } from '../i18n/es.ts';
 import { formatB, formatDate, formatQty } from '../lib/format.ts';
 import type { TradeMetadata } from '../lib/trades/metadata.ts';
 import { api } from './api.ts';
+import ProductEmoji from './ProductEmoji.vue';
 
 /**
  * Trueques para la administración: solo metadatos (partes, estado, fechas, artículos y valores).
@@ -47,7 +48,7 @@ onMounted(load);
             <p class="font-semibold">{{ t.adminTrueques.da(side === 'proposer' ? trade.proposer : trade.receiver) }}</p>
             <ul class="list-disc pl-5">
               <li v-for="(line, index) in trade.lines.filter((l) => l.lado === side)" :key="index">
-                {{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }} ({{ formatB(line.valueCb) }})
+                <ProductEmoji :nombre="line.nombre" :tipo="line.tipo" />{{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }} ({{ formatB(line.valueCb) }})
               </li>
               <li v-if="trade.lines.every((l) => l.lado !== side)" class="list-none hint">—</li>
             </ul>

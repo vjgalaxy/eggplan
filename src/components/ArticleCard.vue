@@ -4,6 +4,7 @@ import { t } from '../i18n/es.ts';
 import { formatB, formatDate, formatQty } from '../lib/format.ts';
 import type { StockItemView } from '../lib/stock/stock.ts';
 import AvatarImg from './AvatarImg.vue';
+import ProductEmoji from './ProductEmoji.vue';
 
 /** Un artículo del stock, tal y como lo ven las familias (y como se previsualiza al añadirlo). */
 const props = defineProps<{ item: StockItemView; showOwner?: boolean; categoryName?: string }>();
@@ -15,7 +16,7 @@ const agotado = computed(() => props.item.disponible <= 0);
   <article class="card" :class="agotado ? 'opacity-70' : ''">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <h3 class="text-lg font-bold">{{ item.nombre }}</h3>
+        <h3 class="text-lg font-bold"><ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}</h3>
         <p v-if="categoryName" class="hint">{{ categoryName }}</p>
       </div>
       <p class="rounded-lg bg-berenjena-100 px-3 py-1 text-base font-bold text-berenjena-800">

@@ -6,6 +6,7 @@ import { searchItems } from '../lib/domain/search.ts';
 import type { ReviewItem } from '../lib/stock/review.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
+import ProductEmoji from './ProductEmoji.vue';
 import { loadCatalogData, refreshCatalogData, type CatalogData } from './catalog-store.ts';
 
 /**
@@ -117,7 +118,7 @@ onMounted(load);
     <ul v-else class="space-y-4">
       <li v-for="item in items" :key="item.id" class="card space-y-3">
         <div>
-          <h3 class="text-lg font-bold">{{ item.nombre }}</h3>
+          <h3 class="text-lg font-bold"><ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}</h3>
           <p class="hint">{{ categoryName(item.categoria) }} · {{ t.articulo.tipo[item.tipo] }} · {{ formatQty(item.cantidad) }} {{ item.unidad }}</p>
           <p class="mt-1 font-semibold">{{ t.revision.valorFamilia(formatB(item.valueCb), item.unidad) }}</p>
           <p v-if="item.nota" class="hint">{{ item.nota }}</p>
@@ -152,7 +153,7 @@ onMounted(load);
             <ul class="space-y-2">
               <li v-for="s in suggestions" :key="s.id" class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3">
                 <span>
-                  <span class="block font-semibold">{{ s.nombre }}</span>
+                  <span class="block font-semibold"><ProductEmoji :nombre="s.nombre" :categoria="s.categoria" :tipo="s.tipo" />{{ s.nombre }}</span>
                   <span class="hint">{{ t.articulo.porUnidad(formatB(s.refCb), s.unidad) }}</span>
                 </span>
                 <button type="button" class="btn-primary" :disabled="busy" @click="send(item, { action: 'link', catalogItemId: s.id })">

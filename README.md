@@ -85,10 +85,15 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 - Sala única «A Praza» (`config.chat.nombre`), estilo clásico: hora, avatar pequeño, nick coloreado, letra monoespaciada; sin reacciones ni hilos. Los mensajes de la administración son **anuncios** con estilo diferenciado.
 - Sin WebSockets (Netlify Functions no los admite): polling `GET /api/chat?since=<id>` cada `chat.pollingMs` (12 s) **solo con la pestaña visible**, y refresco inmediato tras enviar (`src/components/poller.ts`, con test). Se muestran los últimos 100 con «Cargar mensajes anteriores».
 - Límites en el servidor (con la fila de la persona bloqueada, para que dos envíos simultáneos no se los salten): 500 caracteres, 1 mensaje cada 2 s, 20 por minuto.
+- Se puede **responder** a un mensaje concreto (`respuesta_a`, migración `0005`): se muestra una cita corta del original («↪ Nick: …») que lleva hasta él; si el original se borra, la cita lo indica sin mostrar su texto.
 - Cada persona borra sus mensajes; la administración, cualquiera (queda en la auditoría, sin el texto). Al borrar, el texto se elimina de la base de datos.
 - Retención de `chat.retencionDias` (90): lo antiguo deja de mostrarse y se borra de forma oportunista al publicar (no hace falta una función programada).
 - Navegación: la barra inferior tiene Stocks · Mi stock · Trueques; el inicio está en el logo y la Plaza en el menú de la cuenta y en los puntos donde ayuda (inicio, búsqueda sin resultados, «Se busca», trueques vacíos, tras añadir un artículo).
 - Teclado del móvil: `interactive-widget=resizes-content` en el viewport; la app publica el alto visible real (`--vvh`, de `visualViewport`), oculta la barra inferior mientras se escribe y desplaza el campo con el foco a la vista. La Plaza ajusta su alto a `--vvh`, así que el campo de escribir queda sobre el teclado.
+
+## Emojis de productos
+
+Cada artículo muestra un emoji decorativo (los lectores de pantalla lo ignoran). Se calcula al mostrarlo a partir del nombre, sin guardarlo en la base de datos, así que vale también para los productos propios. Las reglas están en `src/data/emojis.ts` (datos de la comunidad): frases, palabras —gana la primera palabra del nombre que coincida, para que «Zumo de manzana» sea 🧃—, y como respaldo la categoría y el tipo. Un test comprueba que todos los productos del catálogo tienen un emoji propio.
 
 ## Seguridad (resumen de la Fase 0)
 

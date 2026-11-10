@@ -358,6 +358,12 @@ export const t = {
     hoy: 'Hoy',
     ayer: 'Ayer',
     nuevos: 'Hay mensajes nuevos',
+    responder: 'Responder',
+    responderA: (nick: string) => `Responder a ${nick}`,
+    respondiendoA: (nick: string) => `Respondiendo a ${nick}`,
+    cancelarRespuesta: 'No responder',
+    citaBorrada: 'mensaje borrado',
+    irAlOriginal: (nick: string) => `Ir al mensaje de ${nick}`,
     adminTitulo: 'Plaza',
     adminAyuda: 'Lo que escribas aquí se publica como anuncio, con un estilo diferente. Puedes borrar cualquier mensaje; queda en la auditoría (sin el texto).',
     adminEscribir: 'Escribe un anuncio',
@@ -370,6 +376,7 @@ export const t = {
       not_found: 'Ese mensaje ya no está.',
       forbidden: 'Solo puedes borrar tus propios mensajes.',
       blocked: 'Tu plaza está bloqueada y no puede escribir.',
+      reply_not_found: 'El mensaje al que respondías ya no está. Puedes enviar el tuyo sin citarlo.',
     },
     /** Accesos a la Plaza repartidos por la app, donde son útiles. */
     enlaces: {

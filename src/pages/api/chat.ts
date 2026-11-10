@@ -25,7 +25,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
   return json({ ok: true, ...page });
 };
 
-const schema = z.object({ cuerpo: z.string().max(config.chat.maxCaracteres * 4) });
+const schema = z.object({
+  cuerpo: z.string().max(config.chat.maxCaracteres * 4),
+  /** Id del mensaje al que se responde (opcional). */
+  respuestaA: z.number().int().positive().nullable().optional(),
+});
 
 /** Publica un mensaje; si escribe la administración, es un anuncio. */
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -33,6 +37,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!user) return jsonError(401, 'unauthenticated', 'Tu sesión ha caducado. Vuelve a entrar.');
   const body = await parseBody(request, schema);
   if (!body.ok) return body.response;
-  const result = await postChatMessage(await db(), user, body.data.cuerpo);
+  const result = await postChatMessage(await db(), user, body.data.cuerpo, body.data.respuestaA);
   return result.ok ? json({ ok: true, message: result.value.message }) : chatError(result.code, result.retryAfterSec);
 };

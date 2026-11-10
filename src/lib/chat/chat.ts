@@ -8,6 +8,7 @@
  *  - La autora o el autor borra sus mensajes; la administración borra cualquiera (moderación).
  *    Al borrar, el texto se elimina de la base de datos.
  *  - Los mensajes de la administración son anuncios, con estilo diferenciado.
+ *  - Se puede responder a un mensaje concreto (`respuesta_a`): se muestra una cita corta del original.
  *  - Retención: lo anterior a `retencionDias` se borra de forma oportunista al publicar.
  * Los textos se guardan tal cual y la interfaz los muestra siempre como texto (nunca como HTML).
  */
@@ -28,7 +29,20 @@ export interface ChatMessageView {
   deleted: boolean;
   /** Borrado por la administración (y no por quien lo escribió). */
   deletedByAdmin: boolean;
+  /** Mensaje al que responde, con un extracto corto (null si no es una respuesta). */
+  replyTo: ChatReplyView | null;
 }
+
+export interface ChatReplyView {
+  id: number;
+  nick: string;
+  /** Primeras letras del original; null si el original se ha borrado. */
+  extracto: string | null;
+  deleted: boolean;
+}
+
+/** Letras del extracto del mensaje citado. */
+export const REPLY_EXCERPT = 80;
 
 interface RawMessage {
   id: number;
@@ -40,11 +54,19 @@ interface RawMessage {
   created_at: Date;
   deleted_at: Date | null;
   deleted_by: number | null;
+  respuesta_a: number | null;
+  r_nick: string | null;
+  r_cuerpo: string | null;
+  r_deleted: boolean | null;
 }
 
 const SELECT = `
-  SELECT m.id, m.user_id, u.nick, u.avatar, m.kind, m.cuerpo, m.created_at, m.deleted_at, m.deleted_by
-    FROM chat_messages m JOIN users u ON u.id = m.user_id`;
+  SELECT m.id, m.user_id, u.nick, u.avatar, m.kind, m.cuerpo, m.created_at, m.deleted_at, m.deleted_by,
+         m.respuesta_a, ru.nick AS r_nick, left(r.cuerpo, ${REPLY_EXCERPT}) AS r_cuerpo, (r.deleted_at IS NOT NULL) AS r_deleted
+    FROM chat_messages m
+    JOIN users u ON u.id = m.user_id
+    LEFT JOIN chat_messages r ON r.id = m.respuesta_a
+    LEFT JOIN users ru ON ru.id = r.user_id`;
 
 const toView = (r: RawMessage): ChatMessageView => ({
   id: r.id,
@@ -56,6 +78,10 @@ const toView = (r: RawMessage): ChatMessageView => ({
   createdAt: new Date(r.created_at).toISOString(),
   deleted: r.deleted_at !== null,
   deletedByAdmin: r.deleted_at !== null && r.deleted_by !== null && r.deleted_by !== r.user_id,
+  replyTo:
+    r.respuesta_a === null || r.r_nick === null
+      ? null
+      : { id: r.respuesta_a, nick: r.r_nick, extracto: r.r_deleted ? null : r.r_cuerpo, deleted: r.r_deleted === true },
 });
 
 export interface ChatPage {
@@ -111,7 +137,7 @@ export async function listMessages(
   return { messages: rows.map(toView), hasMore, deletedIds, now: new Date(clock[0]?.now ?? Date.now()).toISOString() };
 }
 
-export type ChatError = 'empty' | 'too_long' | 'too_fast' | 'too_many' | 'not_found' | 'forbidden' | 'blocked';
+export type ChatError = 'empty' | 'too_long' | 'too_fast' | 'too_many' | 'not_found' | 'forbidden' | 'blocked' | 'reply_not_found';
 
 export type ChatResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true; value: T })
@@ -122,6 +148,7 @@ export async function postChatMessage(
   db: Db,
   user: { id: number; role: Role },
   text: string,
+  replyTo?: number | null,
 ): Promise<ChatResult<{ message: ChatMessageView }>> {
   const cuerpo = text.replace(/\r\n?/g, '\n').trim();
   if (cuerpo.length === 0) return { ok: false, code: 'empty' };
@@ -144,12 +171,20 @@ export async function postChatMessage(
     }
     if ((recent[0]?.per_minute ?? 0) >= config.chat.maxPorMinuto) return { ok: false, code: 'too_many', retryAfterSec: 60 };
 
+    // Solo se responde a un mensaje que sigue a la vista: existe, no está borrado y no ha caducado.
+    if (replyTo !== undefined && replyTo !== null) {
+      const { rows: original } = await q.query(
+        `SELECT 1 FROM chat_messages WHERE id = $1 AND deleted_at IS NULL AND created_at > now() - ($2::int * interval '1 day')`,
+        [replyTo, config.chat.retencionDias],
+      );
+      if (original.length === 0) return { ok: false, code: 'reply_not_found' };
+    }
+
     const kind = user.role === 'admin' ? 'anuncio' : 'mensaje';
-    const { rows } = await q.query<{ id: number }>('INSERT INTO chat_messages (user_id, kind, cuerpo) VALUES ($1, $2, $3) RETURNING id', [
-      user.id,
-      kind,
-      cuerpo,
-    ]);
+    const { rows } = await q.query<{ id: number }>(
+      'INSERT INTO chat_messages (user_id, kind, cuerpo, respuesta_a) VALUES ($1, $2, $3, $4) RETURNING id',
+      [user.id, kind, cuerpo, replyTo ?? null],
+    );
     const id = rows[0]?.id as number;
     if (user.role === 'admin') await audit(q, user.id, 'plaza_anuncio_publicado', null, { mensajeId: id });
 

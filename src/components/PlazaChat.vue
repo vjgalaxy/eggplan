@@ -23,6 +23,9 @@ const error = ref('');
 const text = ref('');
 const busy = ref(false);
 const unseen = ref(false);
+/** Mensaje al que se está respondiendo (se cita al enviar). */
+const replyTarget = ref<ChatMessageView | null>(null);
+const highlighted = ref<number | null>(null);
 const listEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLTextAreaElement | null>(null);
 let serverNow = '';
@@ -126,13 +129,14 @@ async function send() {
   if (!cuerpo || busy.value) return;
   busy.value = true;
   error.value = '';
-  const result = await api<{ message: ChatMessageView }>('/api/chat', { body: { cuerpo } });
+  const result = await api<{ message: ChatMessageView }>('/api/chat', { body: { cuerpo, respuestaA: replyTarget.value?.id ?? null } });
   busy.value = false;
   if (!result.ok) {
     error.value = result.data.message ?? t.comun.errorGenerico;
     return;
   }
   text.value = '';
+  replyTarget.value = null;
   merge([result.data.message]);
   await scrollToBottom();
   void poll(); // refresca en el acto lo que hayan escrito otras personas
@@ -159,6 +163,25 @@ async function remove(message: ChatMessageView) {
     m.id === message.id ? { ...m, deleted: true, cuerpo: null, deletedByAdmin: Boolean(props.admin) && m.userId !== props.myId } : m,
   );
 }
+
+function startReply(message: ChatMessageView) {
+  replyTarget.value = message;
+  inputEl.value?.focus();
+}
+
+/** Lleva a la vista el mensaje citado (si está cargado) y lo resalta un momento. */
+function goToOriginal(id: number) {
+  const el = listEl.value?.querySelector<HTMLElement>(`[data-msg="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  highlighted.value = id;
+  window.setTimeout(() => (highlighted.value = highlighted.value === id ? null : highlighted.value), 2000);
+}
+
+const excerpt = (m: ChatMessageView) => {
+  const text = m.cuerpo ?? '';
+  return [...text].length > 80 ? `${[...text].slice(0, 80).join('')}…` : text;
+};
 
 const canDelete = (m: ChatMessageView) => !m.deleted && (props.admin === true || m.userId === props.myId);
 
@@ -191,23 +214,47 @@ onBeforeUnmount(() => stopPolling?.());
           </div>
           <p v-if="messages.length === 0" class="py-6 text-center font-sans">{{ t.plaza.vacio }}</p>
           <ol class="space-y-1">
-            <li v-for="(m, index) in messages" :key="m.id">
+            <li
+              v-for="(m, index) in messages"
+              :key="m.id"
+              :data-msg="m.id"
+              class="rounded-lg transition-colors"
+              :class="highlighted === m.id ? 'bg-berenjena-100' : ''"
+            >
               <p v-if="showDay(index)" class="my-2 text-center font-sans text-base font-semibold text-tinta-600">— {{ dayLabel(m.createdAt) }} —</p>
 
               <!-- Anuncio de la administración: estilo diferenciado -->
               <div v-if="m.kind === 'anuncio'" class="my-1 rounded-xl border-2 border-hoja-700 bg-hoja-100 px-3 py-2">
                 <p class="flex items-center justify-between gap-2 font-sans text-base font-bold text-hoja-700">
                   <span>{{ t.plaza.anuncio }} · {{ time(m.createdAt) }}</span>
+                  <span class="flex gap-1">
+                  <button v-if="!m.deleted" type="button" class="min-h-11 rounded-lg px-2 font-semibold underline" :aria-label="t.plaza.responderA(m.nick)" @click="startReply(m)">
+                    {{ t.plaza.responder }}
+                  </button>
                   <button v-if="canDelete(m)" type="button" class="min-h-11 rounded-lg px-2 font-semibold underline" :aria-label="t.plaza.borrarMensaje(m.nick)" @click="remove(m)">
                     {{ t.plaza.borrar }}
                   </button>
+                  </span>
                 </p>
                 <p v-if="m.deleted" class="italic text-tinta-600">({{ m.deletedByAdmin ? t.plaza.borradoAdmin : t.plaza.borradoAutor }})</p>
                 <p v-else class="whitespace-pre-wrap break-words text-berenjena-900">{{ m.cuerpo }}</p>
               </div>
 
+              <!-- Cita del mensaje al que responde -->
+              <button
+                v-if="m.replyTo && m.kind !== 'anuncio'"
+                type="button"
+                class="ml-14 flex min-h-8 max-w-full items-center gap-1 truncate rounded px-1 text-left text-tinta-600 hover:bg-berenjena-50"
+                :aria-label="t.plaza.irAlOriginal(m.replyTo.nick)"
+                @click="goToOriginal(m.replyTo.id)"
+              >
+                <span aria-hidden="true">↪</span>
+                <span class="font-bold">{{ m.replyTo.nick }}:</span>
+                <span class="truncate" :class="m.replyTo.deleted ? 'italic' : ''">{{ m.replyTo.deleted ? t.plaza.citaBorrada : m.replyTo.extracto }}</span>
+              </button>
+
               <!-- Línea clásica: [hora] avatar nick: texto -->
-              <div v-else class="group flex items-start gap-2 leading-snug">
+              <div v-if="m.kind !== 'anuncio'" class="group flex items-start gap-2 leading-snug">
                 <span class="shrink-0 pt-0.5 text-tinta-600">[{{ time(m.createdAt) }}]</span>
                 <AvatarImg :avatar="m.avatar" :nick="m.nick" size="xs" class="mt-0.5 shrink-0" />
                 <p class="min-w-0 flex-1 break-words">
@@ -215,6 +262,15 @@ onBeforeUnmount(() => stopPolling?.());
                   <span v-if="m.deleted" class="italic text-tinta-600"> ({{ m.deletedByAdmin ? t.plaza.borradoAdmin : t.plaza.borradoAutor }})</span>
                   <span v-else class="whitespace-pre-wrap"> {{ m.cuerpo }}</span>
                 </p>
+                <button
+                  v-if="!m.deleted"
+                  type="button"
+                  class="min-h-11 shrink-0 rounded-lg px-2 font-sans text-base font-semibold text-berenjena-700 underline"
+                  :aria-label="t.plaza.responderA(m.nick)"
+                  @click="startReply(m)"
+                >
+                  {{ t.plaza.responder }}
+                </button>
                 <button
                   v-if="canDelete(m)"
                   type="button"
@@ -236,6 +292,12 @@ onBeforeUnmount(() => stopPolling?.());
 
     <!-- Campo de escribir: siempre visible, por encima del teclado -->
     <form class="shrink-0 space-y-1" @submit.prevent="send">
+      <div v-if="replyTarget" class="flex items-center justify-between gap-2 rounded-xl border-2 border-berenjena-200 bg-berenjena-50 px-3 py-1">
+        <p class="min-w-0 truncate text-base">
+          <span class="font-bold">{{ t.plaza.respondiendoA(replyTarget.nick) }}:</span> {{ excerpt(replyTarget) }}
+        </p>
+        <button type="button" class="btn-ghost min-h-11! shrink-0 px-3!" @click="replyTarget = null">{{ t.plaza.cancelarRespuesta }}</button>
+      </div>
       <label class="sr-only" for="plaza-msg">{{ admin ? t.plaza.adminEscribir : t.plaza.escribir }}</label>
       <div class="flex items-end gap-2">
         <textarea

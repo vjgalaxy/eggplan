@@ -9,6 +9,7 @@ import type { WantView } from '../lib/stock/wants.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
 import PlazaHint from './PlazaHint.vue';
+import ProductEmoji from './ProductEmoji.vue';
 
 /** «Se busca»: tablón de lo que las familias necesitan, con formulario para publicar. */
 const props = defineProps<{ wants: WantView[]; catalogItems: CatalogItemRow[]; myId: number; startText?: string }>();
@@ -144,7 +145,7 @@ async function close(want: WantView) {
       <li v-for="w in wants" :key="w.id" class="card">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 class="text-lg font-bold">{{ w.nombre }}</h3>
+            <h3 class="text-lg font-bold"><ProductEmoji :nombre="w.nombre" />{{ w.nombre }}</h3>
             <p v-if="w.cantidad" class="font-semibold">{{ formatQty(w.cantidad) }} <span v-if="w.unidad">{{ w.unidad }}</span></p>
             <p v-if="w.nota" class="hint">{{ w.nota }}</p>
           </div>

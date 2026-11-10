@@ -10,6 +10,7 @@ const STATUS: Record<ChatError, number> = {
   not_found: 404,
   forbidden: 403,
   blocked: 403,
+  reply_not_found: 409,
 };
 
 export function chatError(code: ChatError, retryAfterSec?: number): Response {

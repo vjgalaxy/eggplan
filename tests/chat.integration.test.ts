@@ -145,6 +145,38 @@ describe('borrar y moderar', () => {
   });
 });
 
+describe('responder a un mensaje', () => {
+  it('la respuesta lleva el nick y un extracto corto del original', async () => {
+    const original = await say(ana, '¿Alguien tiene leña de roble seca? La necesito para el fin de semana, que viene frío y no me queda casi nada.');
+    const result = await postChatMessage(db, beto, 'Yo tengo, pásate mañana', original);
+    expect(result.ok).toBe(true);
+    const reply = (await listMessages(db)).messages.at(-1);
+    expect(reply?.replyTo).toMatchObject({ id: original, nick: 'Peliqueiro', deleted: false });
+    expect(reply?.replyTo?.extracto).toHaveLength(80);
+    expect(reply?.replyTo?.extracto?.startsWith('¿Alguien tiene leña')).toBe(true);
+    // Un mensaje normal no responde a nada.
+    expect((await listMessages(db)).messages[0]?.replyTo).toBeNull();
+  });
+
+  it('no se puede responder a un mensaje inexistente, borrado o caducado', async () => {
+    expect(await postChatMessage(db, beto, 'hola', 999_999)).toEqual({ ok: false, code: 'reply_not_found' });
+    const borrado = await say(ana, 'me equivoqué');
+    await deleteChatMessage(db, ana, borrado);
+    expect(await postChatMessage(db, beto, '¿qué decías?', borrado)).toEqual({ ok: false, code: 'reply_not_found' });
+    await db.query(`INSERT INTO chat_messages (user_id, cuerpo, created_at) VALUES ($1, 'antiguo', now() - interval '91 days')`, [ana.id]);
+    const { rows } = await db.query<{ id: number }>(`SELECT id FROM chat_messages WHERE cuerpo = 'antiguo'`);
+    expect(await postChatMessage(db, beto, 'respondo tarde', rows[0]?.id)).toEqual({ ok: false, code: 'reply_not_found' });
+  });
+
+  it('si después se borra el original, la cita lo indica y ya no muestra su texto', async () => {
+    const original = await say(ana, 'texto que luego borro');
+    await postChatMessage(db, beto, 'te respondo', original);
+    await deleteChatMessage(db, ana, original);
+    const reply = (await listMessages(db)).messages.at(-1);
+    expect(reply?.replyTo).toEqual({ id: original, nick: 'Peliqueiro', extracto: null, deleted: true });
+  });
+});
+
 describe('retención', () => {
   it('borra lo anterior a 90 días, al publicar y al limpiar', async () => {
     await db.query(`INSERT INTO chat_messages (user_id, cuerpo, created_at) VALUES ($1, 'viejo', now() - interval '91 days')`, [ana.id]);

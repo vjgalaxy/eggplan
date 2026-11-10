@@ -9,6 +9,7 @@ import type { CatalogItemRow, CategoryRow } from '../lib/catalog/catalog.ts';
 import type { StockItemView } from '../lib/stock/stock.ts';
 import { api } from './api.ts';
 import ArticleCard from './ArticleCard.vue';
+import ProductEmoji from './ProductEmoji.vue';
 
 /**
  * Añadir un artículo: primero un buscador del catálogo; si no está lo que busca, el botón
@@ -266,7 +267,7 @@ async function submit() {
             @click="choose(item)"
           >
             <span>
-              <span class="block font-semibold">{{ item.nombre }}</span>
+              <span class="block font-semibold"><ProductEmoji :nombre="item.nombre" :categoria="item.categoria" :tipo="item.tipo" />{{ item.nombre }}</span>
               <span class="hint">{{ categoryName(item.categoria) }} · {{ t.articulo.tipo[item.tipo] }}</span>
             </span>
             <span class="shrink-0 font-bold text-berenjena-700">{{ t.articulo.porUnidad(formatB(item.refCb), item.unidad) }}</span>
@@ -279,7 +280,7 @@ async function submit() {
     <!-- 2a. Artículo del catálogo -->
     <form v-else-if="step === 'catalogo' && chosen" class="space-y-4" novalidate @submit.prevent="submit">
       <div>
-        <p class="text-lg font-bold">{{ chosen.nombre }}</p>
+        <p class="text-lg font-bold"><ProductEmoji :nombre="chosen.nombre" :categoria="chosen.categoria" :tipo="chosen.tipo" />{{ chosen.nombre }}</p>
         <p class="hint">{{ t.anadir.referencia(formatB(chosen.refCb), chosen.unidad) }}</p>
       </div>
       <div>

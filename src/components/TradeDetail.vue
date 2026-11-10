@@ -9,6 +9,7 @@ import type { TradeDetail, TradeLineView } from '../lib/trades/trades.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
 import TradeSummaryBar from './TradeSummaryBar.vue';
+import ProductEmoji from './ProductEmoji.vue';
 
 /** Una propuesta: líneas, resumen, acciones según su estado y el hilo privado de mensajes. */
 const props = defineProps<{ tradeId: number }>();
@@ -133,7 +134,7 @@ onBeforeUnmount(() => clearInterval(timer));
           <p v-if="mine.length === 0" class="hint">{{ t.trueques.nadaLineas }}</p>
           <ul v-else class="space-y-3">
             <li v-for="line in mine" :key="line.id">
-              <p class="font-semibold">{{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }}</p>
+              <p class="font-semibold"><ProductEmoji :nombre="line.nombre" :tipo="line.tipo" />{{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }}</p>
               <p class="hint">{{ t.articulo.porUnidad(formatB(line.valueCb), line.unidad) }} · {{ formatB(lineTotalCb(line.valueCb, line.cantidad)) }}</p>
               <p v-if="line.unverified" class="hint">{{ t.articulo.valorSinVerificar }}</p>
               <template v-if="line.tipo === 'prestamo' && trade.estado === 'completada'">
@@ -151,7 +152,7 @@ onBeforeUnmount(() => clearInterval(timer));
           <p v-if="theirs.length === 0" class="hint">{{ t.trueques.nadaLineas }}</p>
           <ul v-else class="space-y-3">
             <li v-for="line in theirs" :key="line.id">
-              <p class="font-semibold">{{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }}</p>
+              <p class="font-semibold"><ProductEmoji :nombre="line.nombre" :tipo="line.tipo" />{{ formatQty(line.cantidad) }} {{ line.unidad }} · {{ line.nombre }}</p>
               <p class="hint">{{ t.articulo.porUnidad(formatB(line.valueCb), line.unidad) }} · {{ formatB(lineTotalCb(line.valueCb, line.cantidad)) }}</p>
               <p v-if="line.unverified" class="hint">{{ t.articulo.valorSinVerificar }}</p>
               <template v-if="line.tipo === 'prestamo' && trade.estado === 'completada'">
