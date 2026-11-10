@@ -62,6 +62,15 @@ export async function loadCatalog(
         WHERE activo AND NOT edited_by_admin AND slug <> ALL($1::text[])`,
       [items.map((i) => i.slug)],
     );
+
+    // Categorías retiradas del archivo: se borran solo si ya nada las usa («otros» no se borra nunca).
+    await q.query(
+      `DELETE FROM categories
+        WHERE slug <> 'otros' AND slug <> ALL($1::text[])
+          AND NOT EXISTS (SELECT 1 FROM catalog_items i WHERE i.category_slug = categories.slug)
+          AND NOT EXISTS (SELECT 1 FROM stock_items s WHERE s.custom_category = categories.slug)`,
+      [categorias.map((c) => c.slug)],
+    );
   });
 }
 

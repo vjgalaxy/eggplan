@@ -8,6 +8,7 @@ import {
   itemHistory,
   listActiveCatalog,
   listAllCatalog,
+  listCategories,
   updateCatalogItem,
 } from '../src/lib/catalog/catalog.ts';
 import {
@@ -121,6 +122,29 @@ describe('carga del catálogo', () => {
     expect(all.find((i) => creado.ok && i.id === creado.id)).toMatchObject({ activo: true }); // creado por el admin
     expect(all.find((i) => i.slug === 'ajo-kg')).toMatchObject({ activo: true });
     expect(await listMine(db, ana)).toHaveLength(1); // el stock sigue ahí
+  });
+
+  it('una categoría retirada del archivo: las familias dejan de verla y se borra cuando nada la usa', async () => {
+    const extraCategory = { slug: 'retirada', nombre: 'Categoría retirada', orden: 99 };
+    const extraItem: ItemCatalogo = { slug: 'cosa-retirada', nombre: 'Cosa retirada', categoria: 'retirada', tipo: 'bien', unidad: 'unidad', valor: 1 };
+    const visibles = async () => (await listCategories(db, { onlyInUse: true })).map((c) => c.slug);
+
+    await loadCatalog(db, [...categorias, extraCategory], [...catalogo, extraItem]);
+    expect(await visibles()).toContain('retirada');
+
+    // Se retiran del archivo: el producto queda desactivado (sigue referenciando la categoría),
+    // pero las familias ya no la ven; la administración sí.
+    await loadCatalog(db, categorias, catalogo);
+    expect(await visibles()).not.toContain('retirada');
+    expect(await visibles()).toContain('otros');
+    expect((await listCategories(db)).map((c) => c.slug)).toContain('retirada');
+    expect((await listActiveCatalog(db)).some((i) => i.categoria === 'retirada')).toBe(false);
+
+    // Una categoría que ya nadie usa sí desaparece del todo; «otros» nunca.
+    await db.query(`DELETE FROM catalog_items WHERE category_slug = 'retirada'`);
+    await loadCatalog(db, categorias, catalogo);
+    expect((await listCategories(db)).map((c) => c.slug)).not.toContain('retirada');
+    expect((await listCategories(db)).map((c) => c.slug)).toContain('otros');
   });
 
   it('sí actualiza los productos que nadie ha editado y no toca el stock ya creado', async () => {

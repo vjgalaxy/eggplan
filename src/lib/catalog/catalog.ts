@@ -58,8 +58,15 @@ const toItem = (r: RawItem): CatalogItemRow => ({
   nota: r.nota,
 });
 
-export async function listCategories(db: Queryable): Promise<CategoryRow[]> {
-  const { rows } = await db.query<CategoryRow>('SELECT slug, nombre, orden FROM categories ORDER BY orden, nombre');
+/**
+ * Categorías. Para las familias (`onlyInUse`) solo las que tienen algún producto activo, más
+ * «Otros», que siempre está; la administración las ve todas.
+ */
+export async function listCategories(db: Queryable, options: { onlyInUse?: boolean } = {}): Promise<CategoryRow[]> {
+  const where = options.onlyInUse
+    ? `WHERE slug = 'otros' OR EXISTS (SELECT 1 FROM catalog_items i WHERE i.category_slug = categories.slug AND i.activo)`
+    : '';
+  const { rows } = await db.query<CategoryRow>(`SELECT slug, nombre, orden FROM categories ${where} ORDER BY orden, nombre`);
   return rows;
 }
 

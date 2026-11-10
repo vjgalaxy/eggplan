@@ -16,6 +16,7 @@
  * desde el panel; el cargador nunca debe sobrescribir un valor ya editado.
  *
  * Sin productos marinos: es un catálogo de interior (Ourense).
+ * Grupo vegetariano: sin carne, embutidos, animales ni matanza (se conservan huevos, lácteos y miel).
  * ------------------------------------------------------------------
  */
 
@@ -45,7 +46,6 @@ export const categorias: CategoriaCatalogo[] = [
   { slug: "frutas", nombre: "Frutas y frutos secos", orden: 2 },
   { slug: "huevos-lacteos", nombre: "Huevos y lácteos", orden: 3 },
   { slug: "miel-apicultura", nombre: "Miel y apicultura", orden: 4 },
-  { slug: "animales-carnes", nombre: "Animales de corral, carnes y embutidos", orden: 5 },
   { slug: "pan-despensa", nombre: "Pan, dulces y despensa", orden: 6 },
   { slug: "bebidas", nombre: "Bebidas", orden: 7 },
   { slug: "cereales-forraje", nombre: "Cereales, forraje y abonos", orden: 8 },
@@ -128,23 +128,6 @@ export const catalogo: ItemCatalogo[] = [
   { slug: "cera-de-abeja", nombre: "Cera de abeja", categoria: "miel-apicultura", tipo: "bien", unidad: "kg", valor: 10 },
   { slug: "nucleo-de-abejas", nombre: "Núcleo de abejas", categoria: "miel-apicultura", tipo: "bien", unidad: "unidad", valor: 90 },
   { slug: "cuerpo-de-colmena-usado", nombre: "Cuerpo de colmena usado", categoria: "miel-apicultura", tipo: "bien", unidad: "unidad", valor: 30 },
-  // — Animales de corral, carnes y embutidos —
-  { slug: "gallina-ponedora-viva", nombre: "Gallina ponedora (viva)", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 10 },
-  { slug: "pollo-de-corral-vivo", nombre: "Pollo de corral (vivo)", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 12 },
-  { slug: "pollitos", nombre: "Pollitos", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 2.5 },
-  { slug: "conejo-vivo", nombre: "Conejo (vivo)", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 12 },
-  { slug: "lechon-de-cria", nombre: "Lechón de cría", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 70 },
-  { slug: "pollo-de-corral-faenado", nombre: "Pollo de corral (faenado)", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 14, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "conejo-faenado", nombre: "Conejo (faenado)", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 13, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "chorizo-casero", nombre: "Chorizo casero", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 14, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "androlla", nombre: "Androlla", categoria: "animales-carnes", tipo: "bien", unidad: "unidad", valor: 5, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "lacon-curado", nombre: "Lacón curado", categoria: "animales-carnes", tipo: "bien", unidad: "pieza", valor: 18, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "costilla-adobada", nombre: "Costilla adobada", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 9, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "zorza-carne-adobada", nombre: "Zorza (carne adobada)", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 9, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "morcilla-casera", nombre: "Morcilla casera", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 9, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "tocino-curado", nombre: "Tocino curado", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 8, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "manteca-de-cerdo", nombre: "Manteca de cerdo", categoria: "animales-carnes", tipo: "bien", unidad: "kg", valor: 4, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
-  { slug: "jamon-curado-casero", nombre: "Jamón curado casero", categoria: "animales-carnes", tipo: "bien", unidad: "pieza", valor: 70, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
   // — Pan, dulces y despensa —
   { slug: "pan-de-lena-hogaza", nombre: "Pan de leña (hogaza)", categoria: "pan-despensa", tipo: "bien", unidad: "1 kg", valor: 4.5, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
   { slug: "bica-casera", nombre: "Bica casera", categoria: "pan-despensa", tipo: "bien", unidad: "unidad", valor: 6, perecedero: true, nota: "Elaboración casera: la responsabilidad sanitaria es de quien lo ofrece." },
