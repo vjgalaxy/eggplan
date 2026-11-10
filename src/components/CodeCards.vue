@@ -23,7 +23,7 @@ defineProps<{ codes: IssuedCode[]; address: string }>();
       <div class="flex items-center gap-4">
         <AvatarImg :avatar="item.avatar" :nick="item.nick" size="lg" />
         <div>
-          <p class="text-sm font-semibold text-tinta-600">{{ t.app.nombre }}</p>
+          <p class="text-sm font-semibold text-tinta-600"><span aria-hidden="true" class="mr-1">{{ t.app.emoji }}</span>{{ t.app.nombre }}</p>
           <p class="text-2xl font-extrabold">{{ item.nick }}</p>
         </div>
       </div>

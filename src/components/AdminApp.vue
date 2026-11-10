@@ -138,7 +138,7 @@ onMounted(load);
   <div class="mx-auto max-w-4xl px-4 py-6">
     <header class="mb-6 flex items-center justify-between gap-3 print:hidden">
       <div>
-        <p class="text-xl font-extrabold text-berenjena-700">{{ t.app.nombre }}</p>
+        <p class="text-xl font-extrabold text-berenjena-700"><span aria-hidden="true" class="mr-1.5">{{ t.app.emoji }}</span>{{ t.app.nombre }}</p>
         <p class="hint">{{ t.admin.loginTitulo }}</p>
       </div>
       <button type="button" class="btn-secondary" @click="logout">{{ t.nav.salir }}</button>

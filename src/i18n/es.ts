@@ -9,7 +9,7 @@ import { config } from '../data/config.ts';
 const { nombre: moneda, simbolo } = config.moneda;
 
 export const t = {
-  app: { nombre: 'The Eggplan', lema: 'El stock de las familias, a la vista de todas.' },
+  app: { nombre: 'The Eggplan', emoji: '🍆', lema: 'El stock de las familias, a la vista de todas.' },
 
   nav: {
     inicio: 'Inicio',

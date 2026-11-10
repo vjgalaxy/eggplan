@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
   <div class="flex min-h-screen flex-col" :style="{ '--nav-h': typing ? '0px' : '4.5rem' }">
     <header class="sticky top-0 z-20 border-b border-berenjena-100 bg-white">
       <div class="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-2">
-        <a href="/app" class="flex min-h-12 items-center text-xl font-extrabold text-berenjena-700" :aria-label="t.nav.irInicio" :aria-current="view === 'inicio' ? 'page' : undefined">{{ t.app.nombre }}</a>
+        <a href="/app" class="flex min-h-12 items-center text-xl font-extrabold text-berenjena-700" :aria-label="t.nav.irInicio" :aria-current="view === 'inicio' ? 'page' : undefined"><span aria-hidden="true" class="mr-1.5">{{ t.app.emoji }}</span>{{ t.app.nombre }}</a>
         <div class="relative">
           <button
             type="button"
