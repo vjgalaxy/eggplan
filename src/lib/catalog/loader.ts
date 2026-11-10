@@ -7,6 +7,7 @@
  *  - Los productos sin editar sí se actualizan con lo que diga el archivo (así se corrigen erratas
  *    del catálogo inicial).
  *  - No toca los artículos de stock ya creados.
+ *  - Un producto retirado del archivo se desactiva (si nadie lo ha editado); nunca se borra.
  *  - Los productos con `activo: false` se cargan desactivados.
  *  - Convierte los valores a céntimos enteros con Math.round(valor * 100).
  * Una sola sentencia por tabla (unnest), para que el arranque en frío sea rápido.
@@ -52,6 +53,14 @@ export async function loadCatalog(
         items.map((i) => i.activo ?? true),
         items.map((i) => i.nota ?? null),
       ],
+    );
+
+    // Un producto que ya no está en el archivo y que nadie ha editado se desactiva (no se borra:
+    // puede haber artículos de familias que lo usan). Los creados o editados por la administración no se tocan.
+    await q.query(
+      `UPDATE catalog_items SET activo = false, updated_at = now()
+        WHERE activo AND NOT edited_by_admin AND slug <> ALL($1::text[])`,
+      [items.map((i) => i.slug)],
     );
   });
 }

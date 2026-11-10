@@ -49,6 +49,7 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 
 - Upsert por `slug`; ejecutarlo varias veces no cambia nada. Convierte los valores a céntimos enteros (`Math.round(valor × 100)`).
 - **Nunca pisa lo que ha tocado el administrador**: en cuanto edita un producto (valor, nombre, activo…), queda marcado `edited_by_admin` y el cargador ya no lo modifica. Los productos sin editar sí se actualizan con lo que diga el archivo (así se corrigen erratas). No toca los artículos de stock ya creados.
+- Un producto que se quita del archivo se **desactiva** en la base de datos (nunca se borra, por si hay familias que lo usan), salvo que lo haya creado o editado el administrador.
 - Los productos con `activo: false` se cargan desactivados. La categoría «Otros» la crea la migración.
 
 **Reglas de valor** (`src/lib/domain/values.ts`, probadas en `tests/`; todo se valida en el servidor):

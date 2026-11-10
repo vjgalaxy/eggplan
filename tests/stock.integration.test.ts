@@ -104,6 +104,25 @@ describe('carga del catálogo', () => {
     expect(item).toMatchObject({ refCb: 999, refSource: 'admin', activo: false });
   });
 
+  it('un producto retirado del archivo se desactiva, sin borrarlo ni tocar lo editado por el admin ni el stock', async () => {
+    const patata = await catalogId('patata');
+    const cebolla = await catalogId('cebolla');
+    await addCatalogArticle(db, ana, { catalogItemId: patata, cantidad: 3 });
+    await updateCatalogItem(db, admin, cebolla, { nota: 'Editado por el admin' });
+    const creado = await createCatalogItem(db, admin, {
+      nombre: 'Producto del admin', categoria: 'otros', tipo: 'bien', unidad: 'unidad', refCb: 100, perecedero: false, activo: true, nota: null,
+    });
+
+    await loadCatalog(db, categorias, catalogo.filter((i) => i.slug !== 'patata' && i.slug !== 'cebolla'));
+
+    const all = await listAllCatalog(db);
+    expect(all.find((i) => i.slug === 'patata')).toMatchObject({ activo: false }); // retirado y sin editar
+    expect(all.find((i) => i.slug === 'cebolla')).toMatchObject({ activo: true }); // editado por el admin
+    expect(all.find((i) => creado.ok && i.id === creado.id)).toMatchObject({ activo: true }); // creado por el admin
+    expect(all.find((i) => i.slug === 'ajo-kg')).toMatchObject({ activo: true });
+    expect(await listMine(db, ana)).toHaveLength(1); // el stock sigue ahí
+  });
+
   it('sí actualiza los productos que nadie ha editado y no toca el stock ya creado', async () => {
     const patata = await catalogId('patata');
     const made = await addCatalogArticle(db, ana, { catalogItemId: patata, cantidad: 10 });

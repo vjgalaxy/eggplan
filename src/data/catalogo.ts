@@ -305,7 +305,6 @@ export const catalogo: ItemCatalogo[] = [
   { slug: "cuidado-de-colmenas", nombre: "Cuidado de colmenas", categoria: "servicios", tipo: "servicio", unidad: "visita", valor: 15 },
   { slug: "ayuda-en-la-vendimia", nombre: "Ayuda en la vendimia", categoria: "servicios", tipo: "servicio", unidad: "hora", valor: 10 },
   { slug: "ayuda-en-la-recogida-de-castanas", nombre: "Ayuda en la recogida de castañas", categoria: "servicios", tipo: "servicio", unidad: "hora", valor: 10 },
-  { slug: "ayuda-en-la-matanza", nombre: "Ayuda en la matanza", categoria: "servicios", tipo: "servicio", unidad: "jornada", valor: 60 },
   { slug: "esquilado-de-ovejas", nombre: "Esquilado de ovejas", categoria: "servicios", tipo: "servicio", unidad: "animal", valor: 4 },
   { slug: "cuidado-de-animales-o-huerta-en-ausencia", nombre: "Cuidado de animales o huerta en ausencia", categoria: "servicios", tipo: "servicio", unidad: "día", valor: 10 },
   { slug: "transporte-en-furgoneta-viaje-corto", nombre: "Transporte en furgoneta (viaje corto)", categoria: "servicios", tipo: "servicio", unidad: "viaje", valor: 15 },
