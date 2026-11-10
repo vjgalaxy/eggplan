@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import LoginScreen from '../components/LoginScreen.vue';
 import { db } from '../lib/server.ts';
 import { listLoginCards } from '../lib/auth/users.ts';
+import { logServerError } from '../lib/log.ts';
 import { t } from '../i18n/es.ts';
 
 // Única pantalla pública: tarjetas con nick y avatar. Nada más sale de la base de datos hacia aquí.
@@ -10,7 +11,8 @@ let cards: Awaited<ReturnType<typeof listLoginCards>> = [];
 let unavailable = false;
 try {
   cards = await listLoginCards(await db());
-} catch {
+} catch (error) {
+  logServerError('pantalla de acceso', error);
   unavailable = true;
 }
 ---
