@@ -72,7 +72,13 @@ async function saveEdit() {
     return;
   }
   let confirmado = false;
-  if (item.custom && ownValueCb !== null && ownValueCb > config.productosPropios.confirmarValorMayorQue * config.moneda.centesimas) {
+  // Confirmación si es muy alto; en artículos del catálogo, solo si además supera el recomendado.
+  const aboveRecommended = ownValueCb !== null && ownValueCb > (item.recommendedCb ?? 0);
+  if (
+    ownValueCb !== null &&
+    ownValueCb > config.productosPropios.confirmarValorMayorQue * config.moneda.centesimas &&
+    (item.custom || aboveRecommended)
+  ) {
     if (!window.confirm(t.anadir.confirmarValor(formatB(ownValueCb)))) return;
     confirmado = true;
   }
@@ -201,10 +207,10 @@ onBeforeUnmount(() => clearTimeout(undoTimer));
                   type="text"
                   inputmode="decimal"
                   autocomplete="off"
-                  :placeholder="item.custom ? '' : formatB(item.maxCb ?? 0)"
+                  :placeholder="item.custom ? '' : formatB(item.recommendedCb ?? 0)"
                 />
                 <p v-if="!item.custom" class="hint mt-1">
-                  {{ t.miStock.valorRecomendado(formatB(item.maxCb ?? 0)) }} {{ t.miStock.valorQuitar }}
+                  {{ t.miStock.valorRecomendado(formatB(item.recommendedCb ?? 0)) }} {{ t.miStock.valorQuitar }}
                 </p>
                 <p v-else-if="item.unverified" class="hint mt-1">{{ t.miStock.sinVerificarAviso }}</p>
                 <p v-else class="hint mt-1">{{ t.miStock.verificadoAviso }} ({{ t.miStock.valorMaximo(formatB(item.maxCb ?? 0)) }})</p>

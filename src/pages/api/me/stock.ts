@@ -13,6 +13,7 @@ const schema = z.discriminatedUnion('modo', [
     cantidad: quantity,
     condicion: condicion.nullable().optional(),
     ownValueCb: cb.nullable().optional(),
+    confirmado: z.boolean().optional(),
     caducaEl: date.nullable().optional(),
     nota: notaStock,
   }),
@@ -51,6 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           cantidad: data.cantidad,
           condicion: data.condicion,
           ownValueCb: data.ownValueCb,
+          confirmado: data.confirmado,
           caducaEl: data.caducaEl,
           nota: data.nota,
         })

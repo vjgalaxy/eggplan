@@ -177,22 +177,43 @@ describe('administración del catálogo', () => {
 });
 
 describe('regla del valor en el stock', () => {
-  it('no se puede fijar un valor propio por encima de referencia × factor (en el servidor)', async () => {
+  it('el valor propio se puede subir o bajar respecto al recomendado, dentro del tope duro (en el servidor)', async () => {
     const bien = await firstOfType('bien');
     const added = await addCatalogArticle(db, ana, { catalogItemId: bien.id, cantidad: 2, condicion: 'usado' });
     if (!added.ok) throw new Error('no se pudo añadir');
     const id = added.value.id;
-    const max = Math.round(bien.ref_value_cb * 0.5);
+    const recomendado = Math.round(bien.ref_value_cb * 0.5);
 
-    const tooHigh = await updateArticle(db, ana, id, { ownValueCb: max + 1 });
-    expect(tooHigh).toEqual({ ok: false, code: 'value_too_high', maxCb: max });
-    expect(await updateArticle(db, ana, id, { ownValueCb: max })).toEqual({ ok: true });
-    expect(await updateArticle(db, ana, id, { ownValueCb: Math.max(0, max - 1) })).toEqual({ ok: true });
-    // También al crear el artículo.
+    const valor = async () => (await listMine(db, ana))[0]?.valueCb;
+    expect(await updateArticle(db, ana, id, { ownValueCb: recomendado + 50 })).toEqual({ ok: true });
+    expect(await valor()).toBe(recomendado + 50); // por encima del recomendado
+    expect(await updateArticle(db, ana, id, { ownValueCb: Math.max(0, recomendado - 1) })).toEqual({ ok: true });
+    expect(await valor()).toBe(Math.max(0, recomendado - 1)); // por debajo
+    expect((await listMine(db, ana))[0]).toMatchObject({ recommendedCb: recomendado });
+
+    // Tope duro y valor no entero, también al crear el artículo.
+    const cap = config.productosPropios.valorMaximoPropio * 100;
+    expect(await updateArticle(db, ana, id, { ownValueCb: cap + 1, confirmado: true })).toMatchObject({ ok: false, code: 'value_above_hard_cap' });
+    expect(await updateArticle(db, ana, id, { ownValueCb: 1.5 })).toMatchObject({ ok: false, code: 'invalid' });
     const other = await firstOfType('servicio');
-    expect(await addCatalogArticle(db, ana, { catalogItemId: other.id, cantidad: 1, ownValueCb: other.ref_value_cb + 1 })).toMatchObject({
+    expect(await addCatalogArticle(db, ana, { catalogItemId: other.id, cantidad: 1, ownValueCb: cap + 1, confirmado: true })).toMatchObject({
       ok: false,
-      code: 'value_too_high',
+      code: 'value_above_hard_cap',
+    });
+  });
+
+  it('un valor muy alto y por encima del recomendado pide confirmación', async () => {
+    const bien = await firstOfType('bien');
+    const umbral = config.productosPropios.confirmarValorMayorQue * 100;
+    const added = await addCatalogArticle(db, ana, { catalogItemId: bien.id, cantidad: 1 });
+    if (!added.ok) throw new Error('alta');
+    const id = added.value.id;
+    expect(await updateArticle(db, ana, id, { ownValueCb: umbral + 1 })).toMatchObject({ ok: false, code: 'needs_confirmation' });
+    expect(await updateArticle(db, ana, id, { ownValueCb: umbral + 1, confirmado: true })).toEqual({ ok: true });
+    const other = await firstOfType('servicio');
+    expect(await addCatalogArticle(db, ana, { catalogItemId: other.id, cantidad: 1, ownValueCb: umbral + 1 })).toMatchObject({
+      ok: false,
+      code: 'needs_confirmation',
     });
   });
 
@@ -211,10 +232,11 @@ describe('regla del valor en el stock', () => {
     expect(mine.find((i) => i.catalogItemId === prestamo.id)?.valueCb).toBe(prestamo.ref_value_cb);
   });
 
-  it('si el admin baja la referencia, los artículos se ajustan solos (por el mínimo)', async () => {
+  it('si el admin baja la referencia, bajan los artículos sin valor propio; los que lo tienen mantienen el suyo', async () => {
     const bien = await firstOfType('bien');
+    const propio = bien.ref_value_cb;
     const sinPropio = await addCatalogArticle(db, ana, { catalogItemId: bien.id, cantidad: 1 });
-    const conPropio = await addCatalogArticle(db, beto, { catalogItemId: bien.id, cantidad: 1, ownValueCb: bien.ref_value_cb });
+    const conPropio = await addCatalogArticle(db, beto, { catalogItemId: bien.id, cantidad: 1, ownValueCb: propio });
     if (!sinPropio.ok || !conPropio.ok) throw new Error('alta');
 
     const nueva = Math.floor(bien.ref_value_cb / 2);
@@ -222,7 +244,7 @@ describe('regla del valor en el stock', () => {
 
     const { items } = await listVisible(db);
     expect(items.find((i) => i.id === sinPropio.value.id)?.valueCb).toBe(nueva);
-    expect(items.find((i) => i.id === conPropio.value.id)?.valueCb).toBe(nueva);
+    expect(items.find((i) => i.id === conPropio.value.id)?.valueCb).toBe(propio);
   });
 
   it('si el admin sube la referencia, suben los artículos sin valor propio y no los que lo tienen', async () => {
@@ -435,20 +457,20 @@ describe('productos propios', () => {
     expect(await applyReview(db, admin, nuevo, { action: 'adjust', valueCb: 10_000_000 })).toEqual({ ok: false, code: 'value_above_hard_cap' });
   });
 
-  it('vincular a un producto del catálogo aplica referencia × factor y la regla «solo a la baja»', async () => {
+  it('vincular a un producto del catálogo lo convierte en un artículo normal, conservando el valor de la familia', async () => {
     const bien = await firstOfType('bien');
-    const id = await pending(bien.ref_value_cb * 5); // la familia lo había valorado muy por encima
-    expect(await updateArticle(db, ana, id, { condicion: 'usado', ownValueCb: bien.ref_value_cb * 5, confirmado: true })).toEqual({ ok: true });
+    const id = await pending(bien.ref_value_cb * 5); // la familia lo había valorado por encima
+    expect(await updateArticle(db, ana, id, { condicion: 'usado' })).toEqual({ ok: true });
 
     expect(await applyReview(db, admin, id, { action: 'link', catalogItemId: bien.id })).toEqual({ ok: true });
 
     const item = (await listVisible(db)).items[0];
     const recomendado = Math.round(bien.ref_value_cb * 0.5);
-    expect(item).toMatchObject({ custom: false, unverified: false, catalogItemId: bien.id, valueCb: recomendado, condicion: 'usado' });
-    // Ahora rige la regla de siempre: no se puede subir por encima del recomendado.
-    expect(await updateArticle(db, ana, id, { ownValueCb: recomendado + 1 })).toMatchObject({ ok: false, code: 'value_too_high' });
-    expect(await updateArticle(db, ana, id, { ownValueCb: recomendado })).toEqual({ ok: true });
-    // Y si el admin baja la referencia, se ajusta solo.
+    expect(item).toMatchObject({ custom: false, unverified: false, catalogItemId: bien.id, valueCb: bien.ref_value_cb * 5, condicion: 'usado' });
+    // Si la familia quita su valor, rige referencia × factor de estado.
+    expect(await updateArticle(db, ana, id, { ownValueCb: null })).toEqual({ ok: true });
+    expect((await listVisible(db)).items[0]?.valueCb).toBe(recomendado);
+    // Y si el admin baja la referencia, el artículo sin valor propio baja solo.
     await updateCatalogItem(db, admin, bien.id, { refCb: 10 });
     expect((await listVisible(db)).items[0]?.valueCb).toBe(5);
     // Un producto del catálogo inexistente no se puede vincular.

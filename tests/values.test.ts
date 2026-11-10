@@ -20,11 +20,12 @@ describe('valor recomendado y efectivo', () => {
     expect(recommendedCb(400, 'prestamo', null)).toBe(400);
   });
 
-  it('sin valor propio rige el recomendado; con valor propio, el mínimo de los dos', () => {
+  it('sin valor propio rige el recomendado; con valor propio, el de la familia (arriba o abajo)', () => {
     const base = { refCb: 400, tipo: 'bien', condicion: 'usado', valueStatus: 'catalogo', verifiedCb: null } as const;
     expect(effectiveCb({ ...base, ownCb: null })).toBe(200);
     expect(effectiveCb({ ...base, ownCb: 150 })).toBe(150);
-    expect(effectiveCb({ ...base, ownCb: 900 })).toBe(200);
+    expect(effectiveCb({ ...base, ownCb: 900 })).toBe(900);
+    expect(effectiveCb({ ...base, ownCb: 0 })).toBe(0);
   });
 
   it('producto propio: su valor mientras no está verificado; luego el mínimo con el verificado', () => {
@@ -34,12 +35,25 @@ describe('valor recomendado y efectivo', () => {
     expect(effectiveCb({ ...base, ownCb: 300, valueStatus: 'verificado', verifiedCb: 500 })).toBe(300);
   });
 
-  it('no se puede fijar un valor propio por encima de referencia × factor', () => {
-    expect(checkCatalogOwnValue(200, 400, 'bien', 'usado')).toEqual({ ok: true });
-    expect(checkCatalogOwnValue(201, 400, 'bien', 'usado')).toEqual({ ok: false, code: 'value_too_high', maxCb: 200 });
-    expect(checkCatalogOwnValue(-1, 400, 'bien', 'usado')).toMatchObject({ ok: false, code: 'invalid' });
-    expect(checkCatalogOwnValue(1.5, 400, 'bien', 'usado')).toMatchObject({ ok: false, code: 'invalid' });
-    expect(checkCatalogOwnValue(0, 400, 'prestamo', null)).toEqual({ ok: true }); // un préstamo puede valer 0
+  it('valor propio de un artículo del catálogo: arriba o abajo del recomendado, con tope duro', () => {
+    expect(checkCatalogOwnValue(100, 200, false)).toEqual({ ok: true }); // por debajo
+    expect(checkCatalogOwnValue(200, 200, false)).toEqual({ ok: true }); // igual
+    expect(checkCatalogOwnValue(900, 200, false)).toEqual({ ok: true }); // por encima, sin ser «muy alto»
+    expect(checkCatalogOwnValue(0, 200, false)).toEqual({ ok: true }); // un préstamo puede valer 0
+    expect(checkCatalogOwnValue(-1, 200, false)).toMatchObject({ ok: false, code: 'invalid' });
+    expect(checkCatalogOwnValue(1.5, 200, false)).toMatchObject({ ok: false, code: 'invalid' });
+    expect(checkCatalogOwnValue(100_001, 200, true)).toMatchObject({ ok: false, code: 'value_above_hard_cap', maxCb: 100_000 });
+  });
+
+  it('pide confirmación solo si supera el umbral Y el recomendado', () => {
+    // 150 B por encima del umbral (100 B) y del recomendado (4 B): pide confirmar.
+    expect(checkCatalogOwnValue(15_000, 400, false)).toMatchObject({ ok: false, code: 'needs_confirmation' });
+    expect(checkCatalogOwnValue(15_000, 400, true)).toEqual({ ok: true });
+    // Una estufa recomendada en 120 B puesta a 120 B no pregunta; a 150 B sí.
+    expect(checkCatalogOwnValue(12_000, 12_000, false)).toEqual({ ok: true });
+    expect(checkCatalogOwnValue(15_000, 12_000, false)).toMatchObject({ ok: false, code: 'needs_confirmation' });
+    // Bajar nunca pide confirmación.
+    expect(checkCatalogOwnValue(11_000, 12_000, false)).toEqual({ ok: true });
   });
 
   it('producto propio: tope duro, confirmación por encima del umbral y tope del valor verificado', () => {
@@ -55,9 +69,9 @@ describe('valor recomendado y efectivo', () => {
   });
 
   it('maxAllowedCb refleja la regla de cada tipo de artículo', () => {
-    expect(maxAllowedCb({ refCb: 400, tipo: 'bien', condicion: 'bueno', valueStatus: 'catalogo', verifiedCb: null })).toBe(300);
-    expect(maxAllowedCb({ refCb: null, tipo: 'bien', condicion: null, valueStatus: 'sin_verificar', verifiedCb: null })).toBe(100_000);
-    expect(maxAllowedCb({ refCb: null, tipo: 'bien', condicion: null, valueStatus: 'verificado', verifiedCb: 800 })).toBe(800);
+    expect(maxAllowedCb({ refCb: 400, valueStatus: 'catalogo', verifiedCb: null })).toBe(100_000);
+    expect(maxAllowedCb({ refCb: null, valueStatus: 'sin_verificar', verifiedCb: null })).toBe(100_000);
+    expect(maxAllowedCb({ refCb: null, valueStatus: 'verificado', verifiedCb: 800 })).toBe(800);
   });
 });
 

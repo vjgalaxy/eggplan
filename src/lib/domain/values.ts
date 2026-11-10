@@ -2,11 +2,13 @@
  * Reglas de valor del stock (lógica pura, sin base de datos; se prueba aparte).
  * Todo en céntimos enteros de Berenjena (cB). Nunca float.
  *
- *  - Artículo del catálogo sin valor propio:  referencia × factor de estado.
- *  - Artículo del catálogo con valor propio:  min(valor propio, referencia × factor de estado).
+ *  - Artículo del catálogo sin valor propio:  referencia × factor de estado (el recomendado).
+ *  - Artículo del catálogo con valor propio:  su valor propio (la familia puede subirlo o bajarlo).
  *  - Producto propio sin verificar:           su valor propio.
  *  - Producto propio verificado:              min(valor propio, valor verificado).
- * Una familia puede bajar el valor de sus artículos, nunca subirlo por encima del recomendado.
+ * Todo valor propio tiene un tope duro y pide confirmación si es muy alto (ver `checkCustomValue`).
+ * Decisión de la persona responsable del proyecto: el valor propio de un artículo del catálogo ya
+ * no está limitado por el recomendado (la especificación original solo permitía bajarlo).
  */
 import { config } from '../../data/config.ts';
 
@@ -37,32 +39,34 @@ export interface ValueInput {
 
 /** Valor efectivo por unidad, el que ven todas las familias. */
 export function effectiveCb(v: ValueInput): number {
-  if (v.refCb !== null) {
-    const recommended = recommendedCb(v.refCb, v.tipo, v.condicion);
-    return v.ownCb === null ? recommended : Math.min(v.ownCb, recommended);
-  }
+  if (v.refCb !== null) return v.ownCb ?? recommendedCb(v.refCb, v.tipo, v.condicion);
   const own = v.ownCb ?? 0;
   if (v.valueStatus === 'verificado' && v.verifiedCb !== null) return Math.min(own, v.verifiedCb);
   return own;
 }
 
-/** Tope que la familia no puede superar al fijar el valor de este artículo. */
-export function maxAllowedCb(v: Pick<ValueInput, 'refCb' | 'tipo' | 'condicion' | 'valueStatus' | 'verifiedCb'>): number {
+/** Valor máximo que puede poner la familia a este artículo (tope duro; el verificado, si lo hay). */
+export function maxAllowedCb(v: Pick<ValueInput, 'refCb' | 'valueStatus' | 'verifiedCb'>): number {
   const hardCap = config.productosPropios.valorMaximoPropio * config.moneda.centesimas;
-  if (v.refCb !== null) return recommendedCb(v.refCb, v.tipo, v.condicion);
-  if (v.valueStatus === 'verificado' && v.verifiedCb !== null) return Math.min(v.verifiedCb, hardCap);
+  if (v.refCb === null && v.valueStatus === 'verificado' && v.verifiedCb !== null) return Math.min(v.verifiedCb, hardCap);
   return hardCap;
 }
 
-export type ValueProblem = 'invalid' | 'value_too_high' | 'value_above_hard_cap' | 'value_above_verified' | 'needs_confirmation';
+export type ValueProblem = 'invalid' | 'value_above_hard_cap' | 'value_above_verified' | 'needs_confirmation';
 
 export type ValueCheck = { ok: true } | { ok: false; code: ValueProblem; maxCb?: number };
 
-/** Valor propio de un artículo del catálogo: entero ≥ 0 y nunca por encima de referencia × factor. */
-export function checkCatalogOwnValue(cb: number, refCb: number, tipo: Tipo, condicion: Condicion | null): ValueCheck {
+/**
+ * Valor propio de un artículo del catálogo: entero ≥ 0, con tope duro. Puede estar por encima o
+ * por debajo del recomendado; solo pide confirmación si supera el umbral Y el recomendado
+ * (así no se pregunta por un artículo caro cuyo recomendado ya es alto).
+ */
+export function checkCatalogOwnValue(cb: number, recommended: number, confirmed: boolean): ValueCheck {
   if (!Number.isInteger(cb) || cb < 0) return { ok: false, code: 'invalid' };
-  const max = recommendedCb(refCb, tipo, condicion);
-  if (cb > max) return { ok: false, code: 'value_too_high', maxCb: max };
+  const hardCap = config.productosPropios.valorMaximoPropio * config.moneda.centesimas;
+  if (cb > hardCap) return { ok: false, code: 'value_above_hard_cap', maxCb: hardCap };
+  const confirmAbove = config.productosPropios.confirmarValorMayorQue * config.moneda.centesimas;
+  if (cb > confirmAbove && cb > recommended && !confirmed) return { ok: false, code: 'needs_confirmation', maxCb: confirmAbove };
   return { ok: true };
 }
 

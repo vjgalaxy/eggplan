@@ -2,11 +2,12 @@
  * Stock de las familias: artículos del catálogo y productos propios.
  *
  * Todas las reglas de valor se validan AQUÍ, en el servidor (no solo en el formulario):
- *  - valor propio de un artículo del catálogo ≤ referencia × factor de estado;
+ *  - valor propio de un artículo del catálogo: libre (arriba o abajo del recomendado), con tope
+ *    duro y confirmación si es muy alto;
  *  - productos propios: tope duro, confirmación por encima del umbral y, una vez verificados,
  *    nunca por encima del valor verificado.
  * El valor efectivo se calcula al leer (no se guarda), así que si la referencia cambia, los
- * artículos se ajustan solos.
+ * artículos sin valor propio se ajustan solos.
  */
 import type { Db, Queryable } from '../db/index.ts';
 import { config } from '../../data/config.ts';
@@ -15,6 +16,7 @@ import {
   checkCustomValue,
   effectiveCb,
   maxAllowedCb,
+  recommendedCb,
   type Condicion,
   type Tipo,
   type ValueStatus,
@@ -28,7 +30,6 @@ export type StockError =
   | 'invalid_date'
   | 'duplicate'
   | 'limit'
-  | 'value_too_high'
   | 'value_above_hard_cap'
   | 'value_above_verified'
   | 'needs_confirmation'
@@ -74,6 +75,8 @@ export interface StockItemView {
   ownValueCb?: number | null;
   /** Valor máximo que puede poner la familia (cB). */
   maxCb?: number;
+  /** Valor recomendado (referencia × factor) en artículos del catálogo; null en productos propios. */
+  recommendedCb?: number | null;
   hiddenReason?: string | null;
   createdAt?: string;
 }
@@ -151,6 +154,7 @@ function toView(r: RawStock, full: boolean): StockItemView {
     view.estado = r.estado;
     view.ownValueCb = r.own_value_cb;
     view.maxCb = maxAllowedCb(valueInput);
+    view.recommendedCb = r.ref_value_cb === null ? null : recommendedCb(r.ref_value_cb, r.tipo, r.condicion);
     view.hiddenReason = r.hidden_reason;
     view.createdAt = new Date(r.created_at).toISOString();
   }
@@ -224,6 +228,7 @@ export interface AddCatalogInput {
   cantidad: number;
   condicion?: Condicion | null | undefined;
   ownValueCb?: number | null | undefined;
+  confirmado?: boolean | undefined;
   caducaEl?: string | null | undefined;
   nota?: string | null | undefined;
 }
@@ -241,7 +246,7 @@ export async function addCatalogArticle(db: Db, userId: number, input: AddCatalo
   const condicion: Condicion | null = item.tipo === 'bien' ? (input.condicion ?? 'nuevo') : null;
   let own: number | null = null;
   if (input.ownValueCb !== undefined && input.ownValueCb !== null) {
-    const check = checkCatalogOwnValue(input.ownValueCb, item.ref_value_cb, item.tipo, condicion);
+    const check = checkCatalogOwnValue(input.ownValueCb, recommendedCb(item.ref_value_cb, item.tipo, condicion), input.confirmado === true);
     if (!check.ok) return fail(check.code, check.maxCb);
     own = input.ownValueCb;
   }
@@ -357,7 +362,7 @@ export async function updateArticle(db: Db, userId: number, id: number, patch: U
           if (patch.ownValueCb === null) {
             set('own_value_cb', null);
           } else {
-            const check = checkCatalogOwnValue(patch.ownValueCb, row.ref_value_cb, row.tipo, condicion);
+            const check = checkCatalogOwnValue(patch.ownValueCb, recommendedCb(row.ref_value_cb, row.tipo, condicion), patch.confirmado === true);
             if (!check.ok) return fail(check.code, check.maxCb);
             set('own_value_cb', patch.ownValueCb);
           }

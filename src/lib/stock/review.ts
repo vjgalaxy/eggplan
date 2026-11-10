@@ -9,7 +9,7 @@ import { audit } from '../auth/admin.ts';
 import { insertCatalogItem } from '../catalog/catalog.ts';
 import { notify } from '../notifications.ts';
 import { isUniqueViolation } from './stock.ts';
-import { recommendedCb, type Condicion, type Tipo } from '../domain/values.ts';
+import type { Condicion, Tipo } from '../domain/values.ts';
 
 export interface ReviewItem {
   id: number;
@@ -95,8 +95,9 @@ async function linkToCatalog(q: Queryable, adminId: number, row: RawReview, cata
   const item = rows[0];
   if (!item) throw new ReviewFailure('catalog_item_not_found');
   const condicion: Condicion | null = item.tipo === 'bien' ? (row.condicion ?? 'nuevo') : null;
-  // Rige referencia × factor de estado y la regla «solo a la baja»: el valor propio nunca supera el recomendado.
-  const own = Math.min(row.own_value_cb, recommendedCb(item.ref_value_cb, item.tipo, condicion));
+  // Pasa a ser un artículo normal de ese producto: conserva el valor que puso la familia (ya es un
+  // valor propio libre) y, si lo quita, vuelve a regir referencia × factor de estado.
+  const own = row.own_value_cb;
   await q.query(
     `UPDATE stock_items
         SET catalog_item_id = $2, tipo = $3, unidad = $4, condicion = $5, own_value_cb = $6,

@@ -168,11 +168,17 @@ async function submit() {
   let body: Record<string, unknown>;
   if (step.value === 'catalogo' && chosen.value) {
     let own: number | null = null;
+    let confirmado = false;
     if (ownValue.value.trim() !== '') {
       own = parseB(ownValue.value);
       if (own === null) {
         error.value = t.comun.importeInvalido;
         return;
+      }
+      // Pide confirmación solo si el valor es muy alto y además supera el recomendado.
+      if (own > config.productosPropios.confirmarValorMayorQue * config.moneda.centesimas && own > recommended.value) {
+        if (!window.confirm(t.anadir.confirmarValor(formatB(own)))) return;
+        confirmado = true;
       }
     }
     body = {
@@ -180,6 +186,7 @@ async function submit() {
       catalogItemId: chosen.value.id,
       condicion: chosen.value.tipo === 'bien' ? condicion.value : null,
       ownValueCb: own,
+      confirmado,
       ...common,
     };
   } else {

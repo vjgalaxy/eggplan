@@ -372,4 +372,4 @@ export const catalogo: ItemCatalogo[] = [
   { slug: "tarros-de-cristal-con-tapa", nombre: "Tarros de cristal con tapa", categoria: "hogar", tipo: "bien", unidad: "docena", valor: 3 },
   { slug: "garrafas", nombre: "Garrafas", categoria: "hogar", tipo: "bien", unidad: "unidad", valor: 2 },
   { slug: "herramientas-manuales-usadas", nombre: "Herramientas manuales usadas", categoria: "hogar", tipo: "bien", unidad: "lote", valor: 8 },
-];
+]; 
