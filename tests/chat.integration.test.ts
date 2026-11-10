@@ -3,7 +3,7 @@ import type { Db } from '../src/lib/db/index.ts';
 import { makeTestDb } from './helpers/test-db.ts';
 import { config } from '../src/data/config.ts';
 import { deleteChatMessage, listMessages, postChatMessage, purgeOldMessages } from '../src/lib/chat/chat.ts';
-import { startVisiblePolling, type PollerEnv } from '../src/components/poller.ts';
+import { startAdaptivePolling, startVisiblePolling, type PollerEnv } from '../src/components/poller.ts';
 
 let db: Db;
 let admin: { id: number; role: 'admin' };
@@ -192,7 +192,14 @@ describe('retención', () => {
 
 describe('sondeo solo con la pestaña visible', () => {
   function fakeEnv(visible: boolean) {
-    const state = { visible, handlers: [] as (() => void)[], timers: new Set<number>(), next: 1 };
+    const state = {
+      visible,
+      handlers: [] as (() => void)[],
+      timers: new Set<number>(),
+      next: 1,
+      clock: 0,
+      timeouts: new Map<number, { fn: () => void; ms: number }>(),
+    };
     const env: PollerEnv = {
       isVisible: () => state.visible,
       onVisibilityChange(handler) {
@@ -207,13 +214,81 @@ describe('sondeo solo con la pestaña visible', () => {
       clearInterval(handle) {
         state.timers.delete(handle as number);
       },
+      setTimeout(fn, ms) {
+        const id = state.next++;
+        state.timeouts.set(id, { fn, ms });
+        return id;
+      },
+      clearTimeout(handle) {
+        state.timeouts.delete(handle as number);
+      },
+      now: () => state.clock,
     };
     const setVisible = (v: boolean) => {
       state.visible = v;
       state.handlers.forEach((h) => h());
     };
-    return { env, state, setVisible };
+    /** Ejecuta el temporizador pendiente (solo hay uno: el sondeo adaptativo nunca solapa consultas). */
+    const fire = async () => {
+      const [id, entry] = [...state.timeouts.entries()][0] ?? [];
+      if (id === undefined || !entry) throw new Error('no hay temporizador pendiente');
+      state.timeouts.delete(id);
+      state.clock += entry.ms;
+      entry.fn();
+      await new Promise((r) => setTimeout(r, 0));
+    };
+    const pendingMs = () => [...state.timeouts.values()][0]?.ms;
+    return { env, state, setVisible, fire, pendingMs };
   }
+
+  const opts = { fastMs: 3_000, slowMs: 15_000, idleAfterMs: 120_000 };
+
+  it('adaptativo: rápido mientras hay actividad, espaciado en calma, y vuelve a rápido al haber movimiento', async () => {
+    const { env, fire, pendingMs } = fakeEnv(true);
+    let news = false;
+    let runs = 0;
+    const poller = startAdaptivePolling(() => {
+      runs += 1;
+      return news;
+    }, opts, env);
+    expect(pendingMs()).toBe(3_000);
+    // 2 minutos sin novedades → pasa a cada 15 s.
+    for (let i = 0; i < 40; i += 1) await fire();
+    expect(pendingMs()).toBe(15_000);
+    // Llega algo nuevo → vuelve a cada 3 s.
+    news = true;
+    await fire();
+    expect(pendingMs()).toBe(3_000);
+    news = false;
+    // Escribir o desplazarse en calma también lo acelera sin esperar al turno lento.
+    for (let i = 0; i < 41; i += 1) await fire();
+    expect(pendingMs()).toBe(15_000);
+    poller.active();
+    expect(pendingMs()).toBe(3_000);
+    expect(runs).toBeGreaterThan(80);
+    poller.stop();
+  });
+
+  it('adaptativo: poke() consulta en el acto; con la pestaña oculta no consulta nada', async () => {
+    const { env, state, setVisible, pendingMs } = fakeEnv(true);
+    let runs = 0;
+    const poller = startAdaptivePolling(() => {
+      runs += 1;
+      return false;
+    }, opts, env);
+    poller.poke();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(runs).toBe(1);
+    setVisible(false);
+    expect(state.timeouts.size).toBe(0);
+    setVisible(true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(runs).toBe(2); // al volver, se pone al día en el acto
+    expect(pendingMs()).toBe(3_000);
+    poller.stop();
+    expect(state.timeouts.size).toBe(0);
+    expect(state.handlers).toHaveLength(0);
+  });
 
   it('se detiene al ocultar la pestaña y se reanuda (consultando en el acto) al volver', () => {
     const { env, state, setVisible } = fakeEnv(true);

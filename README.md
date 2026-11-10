@@ -75,7 +75,7 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 - **Préstamos**: al completarse no se descuenta; la cantidad sigue reservada («prestado») hasta que quien presta marca «devuelto».
 - **Caducidad**: las pendientes vencidas pasan a `caducada` de forma oportunista (al listar o abrir una propuesta, o al intentar aceptarla) y se avisa a las dos partes. No hace falta una función programada. Las aceptadas no caducan.
 - **Hilo**: mensajes de hasta 300 caracteres, solo para las dos partes; para cualquier otra persona la propuesta «no existe» (404, contra IDOR). La administración no tiene ninguna vía hacia el hilo: ve solo metadatos (`src/lib/trades/metadata.ts`), y un test comprueba que sus archivos no consultan `trade_messages` ni importan el módulo del hilo.
-- **Avisos** (`notifications`, privados): propuesta recibida/aceptada/rechazada/cancelada/caducada, contraoferta, mensaje (los sin leer de una misma propuesta se agrupan), entregado, completado, préstamo devuelto, clave cambiada o restablecida y revisión de un producto propio. El contador de la navegación se consulta cada `avisos.pollingMs` (30 s) solo con la pestaña visible.
+- **Avisos** (`notifications`, privados): propuesta recibida/aceptada/rechazada/cancelada/caducada, contraoferta, mensaje (los sin leer de una misma propuesta se agrupan), entregado, completado, préstamo devuelto, clave cambiada o restablecida y revisión de un producto propio. El contador de la navegación se consulta cada `avisos.pollingMs` (10 s) solo con la pestaña visible. El hilo de una propuesta y la lista de trueques se actualizan solos con el sondeo adaptativo (ver «Tiempo real»).
 - Importes en cB enteros; el total de una línea se calcula con aritmética entera (`lineTotalCb`).
 
 **Nota de desarrollo.** Con `netlify dev` (puerto 8888), el proxy sustituye las respuestas 403/404 de la API por la página 404 en HTML; la interfaz lo tolera mostrando un mensaje claro. El servidor de Astro directo (4321) y producción devuelven el JSON con el motivo.
@@ -83,13 +83,26 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 ## La Plaza (chat comunitario)
 
 - Sala única «A Praza» (`config.chat.nombre`), estilo clásico: hora, avatar pequeño, nick coloreado, letra monoespaciada; sin reacciones ni hilos. Los mensajes de la administración son **anuncios** con estilo diferenciado.
-- Sin WebSockets (Netlify Functions no los admite): polling `GET /api/chat?since=<id>` cada `chat.pollingMs` (12 s) **solo con la pestaña visible**, y refresco inmediato tras enviar (`src/components/poller.ts`, con test). Se muestran los últimos 100 con «Cargar mensajes anteriores».
+- Sin WebSockets (Netlify Functions no los admite): polling `GET /api/chat?since=<id>` con el sondeo adaptativo (ver «Tiempo real»). Se muestran los últimos 100 con «Cargar mensajes anteriores».
 - Límites en el servidor (con la fila de la persona bloqueada, para que dos envíos simultáneos no se los salten): 500 caracteres, 1 mensaje cada 2 s, 20 por minuto.
 - Se puede **responder** a un mensaje concreto (`respuesta_a`, migración `0005`): se muestra una cita corta del original («↪ Nick: …») que lleva hasta él; si el original se borra, la cita lo indica sin mostrar su texto.
 - Cada persona borra sus mensajes; la administración, cualquiera (queda en la auditoría, sin el texto). Al borrar, el texto se elimina de la base de datos.
 - Retención de `chat.retencionDias` (90): lo antiguo deja de mostrarse y se borra de forma oportunista al publicar (no hace falta una función programada).
 - Navegación: la barra inferior tiene Stocks · Mi stock · Trueques; el inicio está en el logo y la Plaza en el menú de la cuenta y en los puntos donde ayuda (inicio, búsqueda sin resultados, «Se busca», trueques vacíos, tras añadir un artículo).
 - Teclado del móvil: `interactive-widget=resizes-content` en el viewport; la app publica el alto visible real (`--vvh`, de `visualViewport`), oculta la barra inferior mientras se escribe y desplaza el campo con el foco a la vista. La Plaza ajusta su alto a `--vvh`, así que el campo de escribir queda sobre el teclado.
+
+## Tiempo real (sondeo adaptativo)
+
+Netlify Functions no admite WebSockets, así que la inmediatez se consigue consultando a menudo, pero solo cuando tiene sentido (`src/components/poller.ts`, con tests; tiempos en `config.tiempoReal`):
+
+| Pantalla | Con actividad | En calma (tras 2 min) | Pestaña oculta |
+|---|---|---|---|
+| Plaza | cada 3 s | cada 15 s | no consulta |
+| Hilo y estado de una propuesta | cada 3 s | cada 15 s | no consulta |
+| Lista de trueques y avisos | cada 3 s | cada 15 s | no consulta |
+| Contador de avisos (navegación) | cada 10 s | cada 10 s | no consulta |
+
+Cuenta como actividad que llegue algo nuevo, escribir o desplazarse. Al enviar un mensaje o hacer una acción se consulta en el acto, y al volver a la pestaña también. Nunca hay dos consultas a la vez de la misma pantalla. Con 20 familias el coste es pequeño: una pestaña en calma hace 4 consultas por minuto.
 
 ## Emojis de productos
 

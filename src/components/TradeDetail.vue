@@ -9,6 +9,7 @@ import type { TradeDetail, TradeLineView } from '../lib/trades/trades.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
 import TradeSummaryBar from './TradeSummaryBar.vue';
+import { startAdaptivePolling, type AdaptivePoller } from './poller.ts';
 import ProductEmoji from './ProductEmoji.vue';
 
 /** Una propuesta: líneas, resumen, acciones según su estado y el hilo privado de mensajes. */
@@ -29,15 +30,22 @@ const myDelivered = computed(() => (trade.value?.me === 'proposer' ? trade.value
 const otherDelivered = computed(() => (trade.value?.me === 'proposer' ? trade.value.receiverDelivered : trade.value?.proposerDelivered) ?? false);
 const threadOpen = computed(() => ['pendiente', 'aceptada', 'completada'].includes(trade.value?.estado ?? ''));
 
-async function load(markRead = false) {
+/** Huella de lo que se ve: si cambia, ha pasado algo (mensaje nuevo, aceptación, entrega…). */
+const signature = (d: TradeDetail) => `${d.estado}|${d.updatedAt}|${d.messages.length}|${d.messages.at(-1)?.id ?? 0}`;
+
+/** Carga la propuesta. Devuelve true si ha cambiado algo desde la última vez. */
+async function load(markRead = false): Promise<boolean> {
   const result = await api<{ trade: TradeDetail }>(`/api/me/trueques/${props.tradeId}`);
   loading.value = false;
   if (!result.ok) {
-    error.value = result.data.message ?? t.comun.errorGenerico;
-    return;
+    if (!trade.value) error.value = result.data.message ?? t.comun.errorGenerico;
+    return false;
   }
+  const changed = !trade.value || signature(trade.value) !== signature(result.data.trade);
   trade.value = result.data.trade;
-  if (markRead) await markRelatedAvisos();
+  // Lo que llega mientras se está mirando la propuesta no debe sumar al contador de avisos.
+  if (markRead || changed) await markRelatedAvisos();
+  return changed;
 }
 
 /** Al abrir la propuesta, sus avisos sin leer pasan a leídos. */
@@ -60,6 +68,7 @@ async function act(body: Record<string, unknown>, done?: string) {
   }
   if (done) notice.value = done;
   await load();
+  poller?.poke();
 }
 
 function accept() {
@@ -91,18 +100,18 @@ async function sendMessage() {
   }
   text.value = '';
   await load();
+  poller?.poke();
 }
 
-// Refresco ligero del hilo y del estado mientras la pestaña está visible.
-let timer: ReturnType<typeof setInterval> | undefined;
-function tick() {
-  if (document.visibilityState === 'visible' && !busy.value) void load();
-}
-onMounted(() => {
-  void load(true);
-  timer = setInterval(tick, config.avisos.pollingMs);
+// Sondeo adaptativo del hilo y del estado (solo con la pestaña visible): cada 3 s mientras hay
+// movimiento o se escribe, cada 15 s en calma, y en el acto al volver a la pestaña.
+let poller: AdaptivePoller | undefined;
+const { rapidoMs, reposoMs, reposoTrasMs } = config.tiempoReal;
+onMounted(async () => {
+  await load(true);
+  poller = startAdaptivePolling(() => (busy.value ? false : load()), { fastMs: rapidoMs, slowMs: reposoMs, idleAfterMs: reposoTrasMs });
 });
-onBeforeUnmount(() => clearInterval(timer));
+onBeforeUnmount(() => poller?.stop());
 </script>
 
 <template>
@@ -230,7 +239,7 @@ onBeforeUnmount(() => clearInterval(timer));
 
         <form v-if="threadOpen" class="space-y-2" @submit.prevent="sendMessage">
           <label class="label" for="d-msg">{{ t.trueques.escribir }}</label>
-          <textarea id="d-msg" v-model="text" class="input min-h-20!" rows="2" :maxlength="config.propuestas.maxCaracteresMensaje"></textarea>
+          <textarea id="d-msg" v-model="text" class="input min-h-20!" rows="2" :maxlength="config.propuestas.maxCaracteresMensaje" @input="poller?.active()"></textarea>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <p class="hint">{{ t.trueques.caracteres([...text].length, config.propuestas.maxCaracteresMensaje) }}</p>
             <button type="submit" class="btn-primary" :disabled="busy || text.trim() === ''">{{ t.trueques.enviarMensaje }}</button>

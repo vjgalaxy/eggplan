@@ -26,7 +26,6 @@ export const config = {
   chat: {
     nombre: 'A Praza',
     retencionDias: 90,
-    pollingMs: 12_000,
     maxCaracteres: 500,
     maxPorMinuto: 20,
     minMsEntreMensajes: 2_000,
@@ -34,7 +33,15 @@ export const config = {
     ultimos: 100,
   },
 
-  avisos: { pollingMs: 30_000 },
+  /**
+   * «Tiempo real» por sondeo (Netlify Functions no admite WebSockets): Plaza, hilo de cada trueque y
+   * lista de trueques consultan cada `rapidoMs` mientras hay actividad y cada `reposoMs` tras
+   * `reposoTrasMs` de calma. Con la pestaña oculta no consultan nada.
+   */
+  tiempoReal: { rapidoMs: 3_000, reposoMs: 15_000, reposoTrasMs: 120_000 },
+
+  /** Contador de avisos de la navegación (consulta ligera; solo con la pestaña visible). */
+  avisos: { pollingMs: 10_000 },
 
   /** Factor de valor por estado del bien (Fase 1). */
   factoresEstado: { nuevo: 1, bueno: 0.75, usado: 0.5, para_reparar: 0.25 },

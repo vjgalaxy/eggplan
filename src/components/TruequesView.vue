@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { config } from '../data/config.ts';
 import { t } from '../i18n/es.ts';
 import { formatDate } from '../lib/format.ts';
 import type { AvisoView } from '../lib/avisos.ts';
@@ -9,6 +10,7 @@ import { avisoInfo } from './avisos-info.ts';
 import AvatarImg from './AvatarImg.vue';
 import PlazaHint from './PlazaHint.vue';
 import TradeSummaryBar from './TradeSummaryBar.vue';
+import { startAdaptivePolling, type AdaptivePoller } from './poller.ts';
 
 /** Trueques: mis propuestas (por grupos) y el buzón de avisos. */
 const props = defineProps<{ tab?: 'propuestas' | 'avisos' }>();
@@ -34,19 +36,33 @@ const groups = computed(() => {
   ].filter((g) => g.items.length > 0);
 });
 
-async function load() {
+/** Huella de la lista y del buzón: si cambia, ha llegado algo (propuesta, respuesta, aviso…). */
+let lastSignature = '';
+const signatureOf = (list: TradeView[], av: AvisoView[]) =>
+  `${list.map((x) => `${x.id}:${x.estado}:${x.updatedAt}`).join(',')}|${av.map((a) => `${a.id}:${a.read}`).join(',')}`;
+
+/** Carga propuestas y avisos. Devuelve true si ha cambiado algo. */
+async function load(): Promise<boolean> {
   const [tr, av] = await Promise.all([
     api<{ trades: TradeView[] }>('/api/me/trueques'),
     api<{ avisos: AvisoView[]; unread: number }>('/api/me/avisos'),
   ]);
   loading.value = false;
-  if (tr.ok) trades.value = tr.data.trades;
-  else error.value = tr.data.message ?? t.comun.errorGenerico;
+  if (tr.ok) {
+    trades.value = tr.data.trades;
+    error.value = '';
+  } else if (trades.value.length === 0) {
+    error.value = tr.data.message ?? t.comun.errorGenerico;
+  }
   if (av.ok) {
     avisos.value = av.data.avisos;
     unread.value = av.data.unread;
     emit('unread', unread.value);
   }
+  const signature = signatureOf(trades.value, avisos.value);
+  const changed = lastSignature !== '' && signature !== lastSignature;
+  lastSignature = signature;
+  return changed;
 }
 
 async function markAll() {
@@ -64,7 +80,14 @@ async function open(aviso: AvisoView) {
   if (href) go(href);
 }
 
-onMounted(load);
+// La lista se actualiza sola (antes solo se cargaba al abrirla): rápido mientras llegan cosas, en calma después.
+let poller: AdaptivePoller | undefined;
+const { rapidoMs, reposoMs, reposoTrasMs } = config.tiempoReal;
+onMounted(async () => {
+  await load();
+  poller = startAdaptivePolling(load, { fastMs: rapidoMs, slowMs: reposoMs, idleAfterMs: reposoTrasMs });
+});
+onBeforeUnmount(() => poller?.stop());
 </script>
 
 <template>

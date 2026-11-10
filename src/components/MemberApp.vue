@@ -11,6 +11,7 @@ import StocksView from './StocksView.vue';
 import TradeComposer from './TradeComposer.vue';
 import TradeDetail from './TradeDetail.vue';
 import TruequesView from './TruequesView.vue';
+import { startVisiblePolling } from './poller.ts';
 
 /**
  * Área de miembros (/app): navegación (5 elementos + menú del avatar), bienvenida, Ajustes,
@@ -70,14 +71,13 @@ const title = computed(() => {
   return items.find((i) => i.key === view.value)?.label ?? t.nav.inicio;
 });
 
-// Contador de avisos sin leer: consulta ligera cada ~30 s, solo con la pestaña visible.
+// Contador de avisos sin leer: consulta ligera cada 10 s, solo con la pestaña visible.
 const unread = ref(0);
 async function refreshUnread() {
-  if (document.visibilityState !== 'visible') return;
   const result = await api<{ unread: number }>('/api/me/avisos?count=1');
   if (result.ok) unread.value = result.data.unread;
 }
-let unreadTimer: ReturnType<typeof setInterval> | undefined;
+let stopUnread: (() => void) | undefined;
 
 /*
  * Teclado del móvil. Se publica el alto visible real (`--vvh`, de visualViewport) para que la Plaza
@@ -131,23 +131,22 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   document.addEventListener('keydown', onKeydown);
-  document.addEventListener('visibilitychange', refreshUnread);
   document.addEventListener('focusin', onFocusIn);
   document.addEventListener('focusout', onFocusOut);
   updateViewport();
   window.visualViewport?.addEventListener('resize', updateViewport);
   window.addEventListener('resize', updateViewport);
   void refreshUnread();
-  unreadTimer = setInterval(refreshUnread, config.avisos.pollingMs);
+  // Solo con la pestaña visible; al volver a ella, se actualiza en el acto.
+  stopUnread = startVisiblePolling(() => void refreshUnread(), config.avisos.pollingMs);
 });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown);
-  document.removeEventListener('visibilitychange', refreshUnread);
   document.removeEventListener('focusin', onFocusIn);
   document.removeEventListener('focusout', onFocusOut);
   window.visualViewport?.removeEventListener('resize', updateViewport);
   window.removeEventListener('resize', updateViewport);
-  clearInterval(unreadTimer);
+  stopUnread?.();
 });
 </script>
 

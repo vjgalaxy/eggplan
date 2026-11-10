@@ -5,10 +5,12 @@ import { t } from '../i18n/es.ts';
 import type { ChatMessageView, ChatPage } from '../lib/chat/chat.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
-import { startVisiblePolling } from './poller.ts';
+import { startAdaptivePolling, type AdaptivePoller } from './poller.ts';
 
 /**
- * La Plaza: chat clásico (estilo IRC/BBS) con polling solo con la pestaña visible.
+ * La Plaza: chat clásico (estilo IRC/BBS). Sondeo adaptativo solo con la pestaña visible: cada 3 s
+ * mientras hay conversación o la persona escribe, cada 15 s tras 2 minutos de calma, y en el acto al
+ * enviar o al volver a la pestaña.
  * La caja ocupa el alto visible de la pantalla (variable `--vvh`, que se actualiza cuando aparece
  * el teclado del móvil), así que el campo de escribir queda siempre por encima del teclado.
  * Con `admin`, lo que se escribe se publica como anuncio y se puede borrar cualquier mensaje.
@@ -89,15 +91,13 @@ async function load() {
   await scrollToBottom();
 }
 
-let polling = false;
-async function poll() {
-  if (polling || loading.value) return;
-  polling = true;
+/** Consulta lo nuevo. Devuelve true si ha llegado o se ha borrado algo (cuenta como actividad). */
+async function poll(): Promise<boolean> {
+  if (loading.value) return false;
   const params = new URLSearchParams({ since: String(lastId.value) });
   if (serverNow) params.set('deletedSince', serverNow);
   const result = await api<ChatPage>(`/api/chat?${params}`);
-  polling = false;
-  if (!result.ok) return;
+  if (!result.ok) return false;
   const stick = nearBottom();
   const added = merge(result.data.messages);
   applyDeleted(result.data.deletedIds);
@@ -106,6 +106,7 @@ async function poll() {
     if (stick) await scrollToBottom();
     else unseen.value = true;
   }
+  return added > 0 || result.data.deletedIds.length > 0;
 }
 
 async function loadOlder() {
@@ -139,7 +140,7 @@ async function send() {
   replyTarget.value = null;
   merge([result.data.message]);
   await scrollToBottom();
-  void poll(); // refresca en el acto lo que hayan escrito otras personas
+  poller?.poke(); // refresca en el acto lo que hayan escrito otras personas
   inputEl.value?.focus();
 }
 
@@ -185,12 +186,13 @@ const excerpt = (m: ChatMessageView) => {
 
 const canDelete = (m: ChatMessageView) => !m.deleted && (props.admin === true || m.userId === props.myId);
 
-let stopPolling: (() => void) | undefined;
+let poller: AdaptivePoller | undefined;
+const { rapidoMs, reposoMs, reposoTrasMs } = config.tiempoReal;
 onMounted(async () => {
   await load();
-  stopPolling = startVisiblePolling(() => void poll(), config.chat.pollingMs);
+  poller = startAdaptivePolling(poll, { fastMs: rapidoMs, slowMs: reposoMs, idleAfterMs: reposoTrasMs });
 });
-onBeforeUnmount(() => stopPolling?.());
+onBeforeUnmount(() => poller?.stop());
 </script>
 
 <template>
@@ -205,7 +207,7 @@ onBeforeUnmount(() => stopPolling?.());
         aria-live="polite"
         :aria-label="t.plaza.titulo"
         tabindex="0"
-        @scroll="nearBottom() && (unseen = false)"
+        @scroll="poller?.active(); nearBottom() && (unseen = false)"
       >
         <p v-if="loading" class="py-4 font-sans">{{ t.comun.cargando }}</p>
         <template v-else>
@@ -310,6 +312,7 @@ onBeforeUnmount(() => stopPolling?.());
           :placeholder="admin ? t.plaza.adminEscribir : t.plaza.escribir"
           enterkeyhint="send"
           @keydown="onKeydown"
+          @input="poller?.active()"
           @focus="scrollToBottom"
         ></textarea>
         <button type="submit" class="btn-primary shrink-0" :disabled="busy || text.trim() === ''">
