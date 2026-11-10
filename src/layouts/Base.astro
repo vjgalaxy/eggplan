@@ -13,7 +13,8 @@ const fullTitle = title ? `${title} · ${t.app.nombre}` : t.app.nombre;
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- interactive-widget: en Android el teclado reduce el área visible en vez de taparla. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <!-- No indexación, capa 1 de 3 (capa 2: cabecera X-Robots-Tag; capa 3: robots.txt). -->
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="referrer" content="no-referrer" />

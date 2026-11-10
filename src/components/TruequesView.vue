@@ -7,6 +7,7 @@ import type { TradeView } from '../lib/trades/trades.ts';
 import { api, go } from './api.ts';
 import { avisoInfo } from './avisos-info.ts';
 import AvatarImg from './AvatarImg.vue';
+import PlazaHint from './PlazaHint.vue';
 import TradeSummaryBar from './TradeSummaryBar.vue';
 
 /** Trueques: mis propuestas (por grupos) y el buzón de avisos. */
@@ -103,6 +104,7 @@ onMounted(load);
         <p class="mb-4">{{ t.trueques.vacioTexto }}</p>
         <a href="/app/stocks" class="btn-secondary">{{ t.trueques.verStocks }}</a>
       </div>
+      <PlazaHint v-if="trades.length === 0" :text="t.plaza.enlaces.trueques" />
 
       <section v-for="group in groups" :key="group.key" :aria-labelledby="`g-${group.key}`">
         <h2 :id="`g-${group.key}`" class="mb-3">{{ group.title }}</h2>

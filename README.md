@@ -80,6 +80,16 @@ Nada específico de Ourense está en el código: `src/data/config.ts`, `src/data
 
 **Nota de desarrollo.** Con `netlify dev` (puerto 8888), el proxy sustituye las respuestas 403/404 de la API por la página 404 en HTML; la interfaz lo tolera mostrando un mensaje claro. El servidor de Astro directo (4321) y producción devuelven el JSON con el motivo.
 
+## La Plaza (chat comunitario)
+
+- Sala única «A Praza» (`config.chat.nombre`), estilo clásico: hora, avatar pequeño, nick coloreado, letra monoespaciada; sin reacciones ni hilos. Los mensajes de la administración son **anuncios** con estilo diferenciado.
+- Sin WebSockets (Netlify Functions no los admite): polling `GET /api/chat?since=<id>` cada `chat.pollingMs` (12 s) **solo con la pestaña visible**, y refresco inmediato tras enviar (`src/components/poller.ts`, con test). Se muestran los últimos 100 con «Cargar mensajes anteriores».
+- Límites en el servidor (con la fila de la persona bloqueada, para que dos envíos simultáneos no se los salten): 500 caracteres, 1 mensaje cada 2 s, 20 por minuto.
+- Cada persona borra sus mensajes; la administración, cualquiera (queda en la auditoría, sin el texto). Al borrar, el texto se elimina de la base de datos.
+- Retención de `chat.retencionDias` (90): lo antiguo deja de mostrarse y se borra de forma oportunista al publicar (no hace falta una función programada).
+- Navegación: la barra inferior tiene Stocks · Mi stock · Trueques; el inicio está en el logo y la Plaza en el menú de la cuenta y en los puntos donde ayuda (inicio, búsqueda sin resultados, «Se busca», trueques vacíos, tras añadir un artículo).
+- Teclado del móvil: `interactive-widget=resizes-content` en el viewport; la app publica el alto visible real (`--vvh`, de `visualViewport`), oculta la barra inferior mientras se escribe y desplaza el campo con el foco a la vista. La Plaza ajusta su alto a `--vvh`, así que el campo de escribir queda sobre el teclado.
+
 ## Seguridad (resumen de la Fase 0)
 
 - Claves con `scrypt` (N=2¹⁵, r=8, p=1, sal aleatoria, parámetros junto al hash). Sin clave por defecto compartida.

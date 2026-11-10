@@ -2,13 +2,13 @@
 import { computed } from 'vue';
 import { avatarUrl } from '../lib/domain/avatars.ts';
 
-const props = withDefaults(defineProps<{ avatar: string | null; nick: string; size?: 'sm' | 'md' | 'lg' | 'xl' }>(), {
+const props = withDefaults(defineProps<{ avatar: string | null; nick: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' }>(), {
   size: 'md',
 });
 
 const url = computed(() => avatarUrl(props.avatar));
 const sizeClass = computed(
-  () => ({ sm: 'h-8 w-8', md: 'h-12 w-12', lg: 'h-20 w-20', xl: 'h-28 w-28' })[props.size],
+  () => ({ xs: 'h-6 w-6 border', sm: 'h-8 w-8', md: 'h-12 w-12', lg: 'h-20 w-20', xl: 'h-28 w-28' })[props.size],
 );
 const initial = computed(() => props.nick.charAt(0).toUpperCase());
 </script>

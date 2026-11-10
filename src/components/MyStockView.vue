@@ -9,6 +9,7 @@ import { api } from './api.ts';
 import { loadCatalogData, type CatalogData } from './catalog-store.ts';
 import AddArticle from './AddArticle.vue';
 import ArticleCard from './ArticleCard.vue';
+import PlazaHint from './PlazaHint.vue';
 
 /** Mi stock: gestión de mis artículos (añadir, editar cantidad/estado/valor, pausar, borrar con deshacer). */
 const props = defineProps<{ nick: string; avatar: string | null }>();
@@ -19,6 +20,8 @@ const loading = ref(true);
 const error = ref('');
 const notice = ref('');
 const adding = ref(false);
+/** Tras añadir un artículo se sugiere contarlo en la Plaza. */
+const justAdded = ref(false);
 
 const categoryName = (slug: string) => catalog.value?.categories.find((c) => c.slug === slug)?.nombre ?? '';
 
@@ -136,6 +139,7 @@ async function undoDelete() {
 async function onAdded() {
   adding.value = false;
   notice.value = t.miStock.anadido;
+  justAdded.value = true;
   await load();
 }
 
@@ -149,6 +153,7 @@ onBeforeUnmount(() => clearTimeout(undoTimer));
 
     <p v-if="error" class="alert-error" role="alert">{{ error }}</p>
     <p v-if="notice" class="alert-ok" role="status">{{ notice }}</p>
+    <PlazaHint v-if="justAdded" :text="t.plaza.enlaces.miStock" :label="t.plaza.enlaces.contar" />
 
     <!-- Deshacer un borrado durante unos segundos -->
     <div v-if="undo" class="alert-info flex flex-wrap items-center justify-between gap-3" role="status">

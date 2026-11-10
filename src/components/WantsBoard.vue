@@ -8,6 +8,7 @@ import type { CatalogItemRow } from '../lib/catalog/catalog.ts';
 import type { WantView } from '../lib/stock/wants.ts';
 import { api } from './api.ts';
 import AvatarImg from './AvatarImg.vue';
+import PlazaHint from './PlazaHint.vue';
 
 /** «Se busca»: tablón de lo que las familias necesitan, con formulario para publicar. */
 const props = defineProps<{ wants: WantView[]; catalogItems: CatalogItemRow[]; myId: number; startText?: string }>();
@@ -83,6 +84,7 @@ async function close(want: WantView) {
 <template>
   <div class="space-y-5">
     <p class="hint">{{ t.busquedas.intro }}</p>
+    <PlazaHint :text="t.plaza.enlaces.seBusca" />
     <p v-if="notice" class="alert-ok" role="status">{{ notice }}</p>
     <p v-if="error && !open" class="alert-error" role="alert">{{ error }}</p>
 

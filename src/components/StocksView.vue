@@ -8,6 +8,7 @@ import { api } from './api.ts';
 import { loadCatalogData, type CatalogData } from './catalog-store.ts';
 import ArticleCard from './ArticleCard.vue';
 import AvatarImg from './AvatarImg.vue';
+import PlazaHint from './PlazaHint.vue';
 import WantsBoard from './WantsBoard.vue';
 
 /**
@@ -190,6 +191,7 @@ const tabs: { key: Tab; label: string }[] = [
           <button type="button" class="btn-primary mt-4" @click="publishFromSearch">{{ t.stocks.publicarBusqueda }}</button>
         </template>
       </div>
+      <PlazaHint v-if="productResults.length === 0 && items.length > 0" :text="t.plaza.enlaces.stocksSinResultados" />
       <ul v-else class="space-y-3">
         <li v-for="item in productResults" :key="item.id">
           <ArticleCard :item="item" show-owner :category-name="categoryName(item.categoria)">

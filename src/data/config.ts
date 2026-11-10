@@ -30,6 +30,8 @@ export const config = {
     maxCaracteres: 500,
     maxPorMinuto: 20,
     minMsEntreMensajes: 2_000,
+    /** Mensajes que se muestran al abrir la Plaza (con «cargar anteriores» para ver más). */
+    ultimos: 100,
   },
 
   avisos: { pollingMs: 30_000 },
