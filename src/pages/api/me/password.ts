@@ -13,6 +13,9 @@ const schema = z.object({
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
   if (!user || !locals.tokenHash) return jsonError(401, 'unauthenticated', 'Tu sesión ha caducado. Vuelve a entrar.');
+  if (user.role === 'admin') {
+    return jsonError(403, 'forbidden', 'La clave del admin se cambia en la variable de entorno ADMIN_PASSWORD.');
+  }
   const body = await parseBody(request, schema);
   if (!body.ok) return body.response;
 
@@ -26,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     newPassword: body.data.next,
     repeatPassword: body.data.repeat,
   });
-  if (result.ok) return json({ ok: true, redirect: user.role === 'admin' ? '/admin' : '/app' });
+  if (result.ok) return json({ ok: true, redirect: '/app' });
   if (result.code === 'wrong_current') {
     return jsonError(400, 'wrong_current', 'La clave actual no es correcta.');
   }

@@ -12,7 +12,7 @@ import { hashToken } from '../src/lib/security/tokens.ts';
 
 const SECRET = 'secreto-de-pruebas-1234567890';
 const AVATARS = Array.from({ length: 20 }, (_, i) => `avatar-${i + 1}.webp`);
-const ADMIN_PASSWORD = 'clave-admin-inicial-1';
+const ADMIN_PASSWORD = 'Clave Admin Inicial-1';
 
 let db: Db;
 let adminId: number;
@@ -46,7 +46,7 @@ async function activate(nick: string, password = 'mi huerta en agosto'): Promise
 
 beforeEach(async () => {
   db = await makeTestDb();
-  await ensureSeeded(db, { nicks, avatars: AVATARS, adminBootstrapPassword: ADMIN_PASSWORD });
+  await ensureSeeded(db, { nicks, avatars: AVATARS });
   adminId = (await findUserByNick(db, 'admin', 'admin'))!.id;
 });
 
@@ -57,19 +57,39 @@ describe('plazas y administración iniciales', () => {
     expect(seats.every((s) => s.status === 'sin_activar' && !s.hasCredential)).toBe(true);
     expect(new Set(seats.map((s) => s.avatar)).size).toBe(20);
 
-    await ensureSeeded(db, { nicks, avatars: AVATARS, adminBootstrapPassword: ADMIN_PASSWORD });
+    await ensureSeeded(db, { nicks, avatars: AVATARS });
     expect(await listSeats(db)).toHaveLength(config.plazas);
   });
 
-  it('el admin se crea con la variable de entorno y debe cambiar la clave', async () => {
+  it('el admin existe sin clave en la base y entra con la variable de entorno, tal cual', async () => {
     const admin = await findUserByNick(db, 'admin', 'admin');
-    expect(admin?.must_change_password).toBe(true);
-    const result = await login(db, { nick: 'admin', password: ADMIN_PASSWORD, role: 'admin', ip: '9.9.9.9', secret: SECRET });
-    expect(result.ok && result.user.mustChangePassword).toBe(true);
+    expect(admin?.password_hash).toBeNull();
+    expect(admin?.must_change_password).toBe(false);
+    const adminLogin = (password: string, adminPassword: string | undefined = ADMIN_PASSWORD) =>
+      login(db, { nick: 'admin', password, role: 'admin', ip: '9.9.9.9', secret: SECRET, adminPassword });
+    const withoutEnv = (password: string) =>
+      login(db, { nick: 'admin', password, role: 'admin', ip: '9.9.9.9', secret: SECRET, adminPassword: undefined });
+
+    const result = await adminLogin(ADMIN_PASSWORD);
+    expect(result.ok && !result.user.mustChangePassword).toBe(true);
+    // Sin normalizar: mayúsculas y espacios cuentan.
+    expect((await adminLogin(ADMIN_PASSWORD.toLowerCase())).ok).toBe(false);
+    // Sin variable, o con una demasiado corta, nadie entra.
+    expect((await adminLogin('', '')).ok).toBe(false);
+    expect((await adminLogin('corta', 'corta')).ok).toBe(false);
+    expect((await withoutEnv(ADMIN_PASSWORD)).ok).toBe(false);
+  });
+
+  it('limpia la clave guardada de un admin creado con el sistema anterior', async () => {
+    await db.query(`UPDATE users SET password_hash = 'scrypt$x', must_change_password = true WHERE role = 'admin'`);
+    await ensureSeeded(db, { nicks, avatars: AVATARS });
+    const admin = await findUserByNick(db, 'admin', 'admin');
+    expect(admin?.password_hash).toBeNull();
+    expect(admin?.must_change_password).toBe(false);
   });
 
   it('un nick de familia no entra por el login del admin ni al revés', async () => {
-    expect((await login(db, { nick: 'Meco', password: ADMIN_PASSWORD, role: 'admin', ip: '1.1.1.1', secret: SECRET })).ok).toBe(false);
+    expect((await login(db, { nick: 'Meco', password: ADMIN_PASSWORD, role: 'admin', ip: '1.1.1.1', secret: SECRET, adminPassword: ADMIN_PASSWORD })).ok).toBe(false);
     expect((await memberLogin('admin', ADMIN_PASSWORD)).ok).toBe(false);
   });
 

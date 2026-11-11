@@ -14,12 +14,12 @@ Requisitos: Node ≥ 22.23.4 (Astro 7; en Netlify se fija `NODE_VERSION = "24"` 
 
 ```bash
 npm install
-cp .env.example .env        # y rellena ADMIN_BOOTSTRAP_PASSWORD y APP_SECRET
+cp .env.example .env        # y rellena ADMIN_PASSWORD y APP_SECRET
 netlify database migrations apply   # aplica netlify/database/migrations/ a la base local
 npm run dev                 # = netlify dev: http://localhost:8888 (Postgres local + Astro). No uses `astro dev` a secas: no tiene base de datos.
 ```
 
-- Web de familias: `/` · administración: `/admin/login` (usuario fijo `admin`, clave = `ADMIN_BOOTSTRAP_PASSWORD`; se obliga a cambiarla al entrar).
+- Web de familias: `/` · administración: `/admin/login` (usuario fijo `admin`, clave = `ADMIN_PASSWORD`, comparada con la variable en cada acceso; no se guarda en la base de datos ni se cambia desde la web).
 - Las **20 plazas** se crean solas (idempotente) la primera vez que se visita `/` o `/admin/login`, a partir de `src/data/nicks.ts`.
 - En el panel de admin, **«Generar códigos iniciales»** crea un código por plaza (p. ej. `berenjena-4821`), mostrado **una sola vez** con tarjetas imprimibles. La familia entra con él y elige su propia clave.
 
@@ -35,7 +35,7 @@ npm run dev                 # = netlify dev: http://localhost:8888 (Postgres loc
 
 | Variable | Uso |
 |---|---|
-| `ADMIN_BOOTSTRAP_PASSWORD` | Crea la cuenta `admin` la primera vez (≥ 12 caracteres). Se puede borrar después. |
+| `ADMIN_PASSWORD` | Clave del admin (≥ 12 caracteres), leída en cada acceso. Para cambiarla, cambia la variable y vuelve a desplegar. Si falta, nadie entra como admin. (Se acepta también el nombre antiguo `ADMIN_BOOTSTRAP_PASSWORD`.) |
 | `APP_SECRET` | Secreto (≥ 32 caracteres) para firmar con HMAC nicks e IP de los intentos de acceso. Obligatorio en producción. |
 | `NETLIFY_DB_URL` | La inyecta Netlify (producción, vistas previas y `netlify dev`). No se define a mano. |
 

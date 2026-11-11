@@ -92,7 +92,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (adminArea && user.role !== 'admin') {
     return isApi ? deny(403, 'forbidden', 'No tienes permiso para esto.') : goto('/app');
   }
-  if (memberArea && user.role !== 'member' && path !== '/api/me/password') {
+  if (memberArea && user.role !== 'member') {
     return isApi ? deny(403, 'forbidden', 'No tienes permiso para esto.') : goto('/admin');
   }
 

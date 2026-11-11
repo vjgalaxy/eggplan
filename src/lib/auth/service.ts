@@ -2,6 +2,7 @@
  * Casos de uso de acceso: login, cambio de clave, avatar. Reciben la `Db` y los datos como
  * parámetros (sin tocar `Request`/cookies) para poder probarlos con tests de integración.
  */
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Db } from '../db/index.ts';
 import { config } from '../../data/config.ts';
 import { checkPassword, type PasswordProblem } from '../domain/password-policy.ts';
@@ -24,6 +25,14 @@ export interface LoginInput {
   role: Role;
   ip: string | undefined;
   secret: string;
+  /** Solo para role 'admin': la clave esperada (variable de entorno ADMIN_PASSWORD). */
+  adminPassword?: string | undefined;
+}
+
+/** Comparación en tiempo constante (se comparan los SHA-256 para igualar longitudes). */
+function safeEqual(a: string, b: string): boolean {
+  const digest = (s: string) => createHash('sha256').update(s.normalize('NFKC')).digest();
+  return timingSafeEqual(digest(a), digest(b));
 }
 
 export async function login(db: Db, input: LoginInput): Promise<LoginResult> {
@@ -40,12 +49,19 @@ export async function login(db: Db, input: LoginInput): Promise<LoginResult> {
       : { ok: false, code: 'invalid', remaining: failure.remaining };
   }
   if (user.status === 'bloqueado') return { ok: false, code: 'blocked' };
-  if (!user.password_hash) return { ok: false, code: 'not_activated' };
 
-  // Mientras la plaza espera su primer acceso, la "clave" es el código inicial (se normaliza:
-  // los móviles ponen mayúscula inicial). Una clave elegida por la persona se compara tal cual.
-  const candidate = user.must_change_password ? normalizeCode(input.password) : input.password;
-  const valid = await verifyPassword(candidate, user.password_hash);
+  let valid: boolean;
+  if (input.role === 'admin') {
+    // El admin no tiene clave en la base: se compara con la variable de entorno, tal cual.
+    const expected = input.adminPassword;
+    valid = !!expected && [...expected].length >= config.acceso.adminClaveMinLongitud && safeEqual(input.password, expected);
+  } else {
+    if (!user.password_hash) return { ok: false, code: 'not_activated' };
+    // Mientras la plaza espera su primer acceso, la "clave" es el código inicial (se normaliza:
+    // los móviles ponen mayúscula inicial). Una clave elegida por la persona se compara tal cual.
+    const candidate = user.must_change_password ? normalizeCode(input.password) : input.password;
+    valid = await verifyPassword(candidate, user.password_hash);
+  }
   if (!valid) {
     const failure = await recordFailure(db, keys);
     return failure.nowLocked
